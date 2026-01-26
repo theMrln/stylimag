@@ -13,6 +13,7 @@ import Loading from '../molecules/Loading.jsx'
 import WorkspaceLabel from '../workspace/WorkspaceLabel.jsx'
 import CorpusForm from './CorpusForm.jsx'
 import CorpusItem from './CorpusItem.jsx'
+import OjsImportModal from './OjsImportModal.jsx'
 
 import styles from './corpus.module.scss'
 
@@ -21,6 +22,7 @@ export default function Corpus() {
   const { workspaceId } = useParams()
   const { corpus, workspace, isLoading, error } = useCorpus({ workspaceId })
   const createCorpusModal = useModal()
+  const ojsImportModal = useModal()
 
   return (
     <section className={styles.section}>
@@ -40,9 +42,15 @@ export default function Corpus() {
 
       <p className={styles.introduction}>{t('corpus.page.description')}</p>
 
-      <Button primary onClick={() => createCorpusModal.show()}>
-        {t('corpus.createAction.buttonText')}
-      </Button>
+      <div className={styles.actions}>
+        <Button primary onClick={() => createCorpusModal.show()}>
+          {t('corpus.createAction.buttonText')}
+        </Button>
+
+        <Button secondary onClick={() => ojsImportModal.show()}>
+          {t('ojs.import.buttonText')}
+        </Button>
+      </div>
 
       <Modal
         {...createCorpusModal.bindings}
@@ -53,6 +61,11 @@ export default function Corpus() {
           onCancel={() => createCorpusModal.close()}
         />
       </Modal>
+
+      <OjsImportModal
+        bindings={ojsImportModal.bindings}
+        onClose={() => ojsImportModal.close()}
+      />
 
       {error && <Alert className={styles.message} message={error.message} />}
 

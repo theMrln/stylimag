@@ -25,6 +25,7 @@ const {
   Query: CorpusQuery,
   Mutation: CorpusMutation,
 } = require('./corpusResolver')
+const { Query: OjsQuery, Mutation: OjsMutation } = require('./ojsResolver')
 const { Mutation: AuthMutation } = require('./authResolver')
 const { InstanceUsageStats, Query: StatsQuery } = require('./statsResolver')
 const {
@@ -62,6 +63,7 @@ module.exports = {
     ...StatsQuery,
     ...WorkspaceQuery,
     ...CorpusQuery,
+    ...OjsQuery,
   },
   Mutation: {
     ...UserMutation,
@@ -71,5 +73,6 @@ module.exports = {
     ...AuthMutation,
     ...WorkspaceMutation,
     ...CorpusMutation,
+    ...OjsMutation,
   },
 }

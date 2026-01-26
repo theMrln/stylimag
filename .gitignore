@@ -11,3 +11,4 @@ sails/.tmp
 coverage/
 infrastructure/env
 infrastructure/venv
+.DS_Store

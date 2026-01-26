@@ -216,6 +216,16 @@ type InstanceUserStats implements InstanceObjectUsageStats {
   years: [InstanceObjectUsageYearlyStats]
 }
 
+type OjsIssue {
+  id: Int!
+  title: JSON
+  description: JSON
+  datePublished: String
+  year: Int
+  vol: String
+  number: String
+}
+
 type InstanceArticleStats implements InstanceObjectUsageStats {
   total: Int!
   # currentYear: Int!
@@ -429,6 +439,9 @@ type Query {
 
   "Get a corpus [with an access key]"
   sharedCorpus(corpusId: ID!, accessKey: JWT): Corpus
+
+  "Get a list of issues from OJS"
+  ojsIssues: [OjsIssue]
 }
 
 type Mutation {
@@ -501,6 +514,9 @@ type Mutation {
 
   "Get a workspace for mutation"
   workspace(workspaceId: ID!): Workspace
+
+  "Import an issue from OJS as a new corpus"
+  importCorpusFromOJS(issueId: Int!, workspaceId: ID): Corpus
 
   """
   Get an article for a given id.

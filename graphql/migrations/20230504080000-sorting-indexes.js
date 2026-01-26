@@ -16,8 +16,16 @@ exports.up = async function (db) {
 }
 
 exports.down = async function (db) {
-  await db.removeIndex('articles', 'updatedAt_-1')
-  await db.removeIndex('tags', 'name_-1')
-  await db.removeIndex('tags', 'createdAt_-1')
-  await db.removeIndex('versions', 'createdAt_-1')
+  try {
+    await db.removeIndex('articles', 'updatedAt_-1')
+  } catch(e) {}
+  try {
+   await db.removeIndex('tags', 'name_-1')
+  } catch(e) {}
+  try {
+    await db.removeIndex('tags', 'createdAt_-1')
+  } catch(e) {}
+  try {
+    await db.removeIndex('versions', 'createdAt_-1')
+  } catch (e) {}
 }

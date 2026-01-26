@@ -1,0 +1,19 @@
+#import './Corpus.graphql'
+
+query getOjsIssues {
+  ojsIssues {
+    id
+    title
+    description
+    datePublished
+    year
+    vol
+    number
+  }
+}
+
+mutation importCorpusFromOJS($issueId: Int!, $workspaceId: ID) {
+  importCorpusFromOJS(issueId: $issueId, workspaceId: $workspaceId) {
+    ...basicCorpusFields
+  }
+}

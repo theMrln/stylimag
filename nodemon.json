@@ -1,0 +1,19 @@
+{
+  "watch": ["graphql"],
+  "ignore": [
+    "**/node_modules/**",
+    "**/front/**",
+    "**/docs/**",
+    "**/infrastructure/**",
+    "**/*.log",
+    "**/*.test.js",
+    "**/yeditingsession/**",
+    "**/.git/**"
+  ],
+  "ext": "js,json",
+  "exec": "node ./graphql/app.js",
+  "env": {
+    "DOTENV_CONFIG_PATH": ".env"
+  },
+  "legacyWatch": false
+}
