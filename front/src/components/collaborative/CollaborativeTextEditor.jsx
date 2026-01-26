@@ -1,9 +1,10 @@
 import clsx from 'clsx'
-import React, { useCallback, useEffect, useMemo, useRef } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Helmet } from 'react-helmet-async'
 import { useTranslation } from 'react-i18next'
 import { shallowEqual, useDispatch, useSelector } from 'react-redux'
 import { MonacoBinding } from 'y-monaco'
+import { Upload } from 'lucide-react'
 
 import {
   MarkdownMenu,
@@ -19,15 +20,18 @@ import 'monaco-editor/esm/vs/base/browser/ui/codicons/codicon/codicon.css'
 import { useArticleVersion, useEditableArticle } from '../../hooks/article.js'
 import { useBibliographyCompletion } from '../../hooks/bibliography.js'
 import { useCollaboration } from '../../hooks/collaboration.js'
+import { useModal } from '../../hooks/modal.js'
 import { useStyloExportPreview } from '../../hooks/stylo-export.js'
 import defaultEditorOptions from '../Write/providers/monaco/options.js'
-import { onDropIntoEditor } from '../Write/providers/monaco/support.js'
+import { onDropIntoEditor, importMarkdownContent, readFileAsText } from '../Write/providers/monaco/support.js'
 
 import Alert from '../molecules/Alert.jsx'
+import Button from '../atoms/Button.jsx'
 import Loading from '../molecules/Loading.jsx'
 import MonacoEditor from '../molecules/MonacoEditor.jsx'
 import CollaborativeEditorArticleHeader from './CollaborativeEditorArticleHeader.jsx'
 import CollaborativeEditorWebSocketStatus from './CollaborativeEditorWebSocketStatus.jsx'
+import MarkdownImportModal from '../Write/MarkdownImportModal.jsx'
 
 import styles from './CollaborativeTextEditor.module.scss'
 
@@ -52,6 +56,12 @@ export default function CollaborativeTextEditor({
     { articleId, versionId }
   )
   const { t } = useTranslation('editor')
+  const { t: tCommon } = useTranslation()
+  
+  // Markdown import state
+  const importModal = useModal()
+  const [pendingImportFile, setPendingImportFile] = useState(null)
+  const fileInputRef = useRef(null)
 
   const {
     version,
@@ -122,6 +132,48 @@ export default function CollaborativeTextEditor({
     []
   )
 
+  // Handle markdown file dropped or selected
+  const handleMarkdownFile = useCallback((file) => {
+    setPendingImportFile(file)
+    importModal.show()
+  }, [importModal])
+
+  // Handle import confirmation from modal
+  const handleImportConfirm = useCallback(async (mode) => {
+    if (!pendingImportFile || !editorRef.current) return
+    
+    try {
+      const content = await readFileAsText(pendingImportFile)
+      importMarkdownContent(editorRef.current, content, mode)
+    } catch (error) {
+      console.error('Failed to import markdown file:', error)
+    } finally {
+      setPendingImportFile(null)
+      importModal.close()
+    }
+  }, [pendingImportFile, importModal])
+
+  // Handle modal close
+  const handleImportModalClose = useCallback(() => {
+    setPendingImportFile(null)
+    importModal.close()
+  }, [importModal])
+
+  // Handle file input change (toolbar button)
+  const handleFileInputChange = useCallback((event) => {
+    const file = event.target.files?.[0]
+    if (file) {
+      handleMarkdownFile(file)
+    }
+    // Reset input so same file can be selected again
+    event.target.value = ''
+  }, [handleMarkdownFile])
+
+  // Trigger file input click
+  const handleImportButtonClick = useCallback(() => {
+    fileInputRef.current?.click()
+  }, [])
+
   const handleCollaborativeEditorDidMount = useCallback(
     (
       /** @type {IStandaloneCodeEditor} */ editor,
@@ -129,7 +181,9 @@ export default function CollaborativeTextEditor({
     ) => {
       editorRef.current = editor
 
-      editor.onDropIntoEditor(onDropIntoEditor(editor))
+      editor.onDropIntoEditor(onDropIntoEditor(editor, {
+        onMarkdownFile: handleMarkdownFile,
+      }))
 
       const contextMenu = editor.getContribution('editor.contrib.contextmenu')
       const originalMenuActions = contextMenu._getMenuActions(
@@ -161,7 +215,7 @@ export default function CollaborativeTextEditor({
         new MonacoBinding(yText, model, new Set([editor]), awareness)
       }
     },
-    [yText, awareness]
+    [yText, awareness, handleMarkdownFile]
   )
 
   const handleEditorDidMount = useCallback((editor) => {
@@ -238,6 +292,38 @@ export default function CollaborativeTextEditor({
         className={styles.inlineStatus}
         status={websocketStatus}
       />
+
+      {/* Hidden file input for markdown import */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".md,.markdown,.txt"
+        onChange={handleFileInputChange}
+        style={{ display: 'none' }}
+      />
+
+      {/* Markdown import modal */}
+      <MarkdownImportModal
+        bindings={importModal.bindings}
+        file={pendingImportFile}
+        onImport={handleImportConfirm}
+        onClose={handleImportModalClose}
+      />
+
+      {/* Import from file button - shown when in write mode and connected */}
+      {mode === 'write' && !hasVersion && websocketStatus === 'connected' && (
+        <div className={styles.editorToolbar}>
+          <Button
+            small
+            secondary
+            onClick={handleImportButtonClick}
+            title={tCommon('markdownImport.buttonTitle')}
+          >
+            <Upload size={16} />
+            {tCommon('markdownImport.buttonText')}
+          </Button>
+        </div>
+      )}
 
       {mode === 'preview' && (
         <section

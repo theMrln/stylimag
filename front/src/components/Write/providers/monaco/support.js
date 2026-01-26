@@ -2,6 +2,58 @@ import * as vscode from 'monaco-editor'
 
 import { applicationConfig } from '../../../../config.js'
 
+/**
+ * Check if a file is a markdown file based on extension
+ * @param {File} file
+ * @returns {boolean}
+ */
+function isMarkdownFile(file) {
+  const name = file.name.toLowerCase()
+  return name.endsWith('.md') || name.endsWith('.markdown') || name.endsWith('.txt')
+}
+
+/**
+ * Check if a file is an image file based on type
+ * @param {File} file
+ * @returns {boolean}
+ */
+function isImageFile(file) {
+  return file.type.startsWith('image/')
+}
+
+/**
+ * Import markdown content into the editor
+ * @param {import('monaco-editor').editor.IStandaloneCodeEditor} editor
+ * @param {string} content
+ * @param {'replace' | 'insert'} mode
+ */
+export function importMarkdownContent(editor, content, mode) {
+  if (mode === 'replace') {
+    const model = editor.getModel()
+    const fullRange = model.getFullModelRange()
+    editor.executeEdits('import-markdown', [
+      {
+        range: fullRange,
+        text: content,
+        forceMoveMarkers: true,
+      },
+    ])
+    editor.setPosition({ lineNumber: 1, column: 1 })
+  } else {
+    // Insert at cursor position
+    editor.trigger('keyboard', 'type', { text: content })
+  }
+}
+
+/**
+ * Read a file as text
+ * @param {File} file
+ * @returns {Promise<string>}
+ */
+export async function readFileAsText(file) {
+  return file.text()
+}
+
 export class BibliographyCompletionProvider {
   constructor(bibTeXEntries) {
     this.monaco = undefined
@@ -73,27 +125,56 @@ export class BibliographyCompletionProvider {
   }
 }
 
-export function onDropIntoEditor(editor) {
+/**
+ * Creates a drop handler for the Monaco editor
+ * @param {import('monaco-editor').editor.IStandaloneCodeEditor} editor
+ * @param {object} options
+ * @param {(file: File) => void} options.onMarkdownFile - Callback when a markdown file is dropped
+ * @returns {function}
+ */
+export function onDropIntoEditor(editor, options = {}) {
+  const { onMarkdownFile } = options
+  
   return async ({ position, event }) => {
     event.preventDefault()
-    if (window.location.hostname === 'localhost') {
-      console.debug(
-        'imgur.com disallows API call from localhost, cannot upload images'
-      )
-    }
-    if (
-      applicationConfig.imgurClientId === undefined ||
-      applicationConfig.imgurClientId.trim() === ''
-    ) {
-      console.warn(
-        `IMGUR_CLIENT_ID is empty or undefined, cannot upload images`
-      )
-    }
+    
     try {
       const files = event.dataTransfer.files
+      
+      // Check for markdown files first
+      for (const file of files) {
+        if (isMarkdownFile(file)) {
+          if (onMarkdownFile) {
+            onMarkdownFile(file)
+          } else {
+            // Fallback: insert content at cursor if no callback provided
+            const content = await readFileAsText(file)
+            importMarkdownContent(editor, content, 'insert')
+          }
+          return // Only handle first markdown file
+        }
+      }
+      
+      // Handle image files (existing behavior)
+      if (window.location.hostname === 'localhost') {
+        console.debug(
+          'imgur.com disallows API call from localhost, cannot upload images'
+        )
+      }
+      if (
+        applicationConfig.imgurClientId === undefined ||
+        applicationConfig.imgurClientId.trim() === ''
+      ) {
+        console.warn(
+          `IMGUR_CLIENT_ID is empty or undefined, cannot upload images`
+        )
+      }
+      
       const lineNumber = position.lineNumber
       let column = position.column
       for (const file of files) {
+        if (!isImageFile(file)) continue
+        
         const placeholder = `<!-- Uploading ${file.name} -->`
         editor.executeEdits('insert-uploading-placeholder', [
           {
@@ -109,6 +190,8 @@ export function onDropIntoEditor(editor) {
         })
       }
       for (const file of files) {
+        if (!isImageFile(file)) continue
+        
         // sequential upload
         const formData = new FormData()
         formData.append('image', file)

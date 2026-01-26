@@ -1,10 +1,13 @@
 import React, { useCallback, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { RefreshCw } from 'lucide-react'
 
 import Form from '../../Form'
 
 import { ArticleSchemas } from '../../../schemas/schemas.js'
+import { hasOjsData, mapOjsToStyloMetadata } from '../../../helpers/ojsMapper.js'
 
+import Button from '../../atoms/Button.jsx'
 import Select from '../../atoms/Select.jsx'
 
 import styles from './ArticleEditorMetadataForm.module.scss'
@@ -79,6 +82,21 @@ export default function ArticleEditorMetadataForm({
     [handleChange, setType, onTypeChange]
   )
 
+  // Check if this article has OJS data that can be re-imported
+  const showOjsReimport = useMemo(() => hasOjsData(metadata), [metadata])
+
+  // Handle re-importing metadata from stored OJS data
+  const handleOjsReimport = useCallback(() => {
+    if (!metadata?.ojs) return
+    
+    const reimportedMetadata = mapOjsToStyloMetadata(metadata.ojs, {
+      // Keep the type and version from current metadata
+      type: metadata.type,
+      '@version': metadata['@version'],
+    })
+    handleChange(reimportedMetadata)
+  }, [metadata, handleChange])
+
   const { t } = useTranslation()
   return (
     <>
@@ -101,6 +119,19 @@ export default function ArticleEditorMetadataForm({
             </option>
           ))}
         </Select>
+
+        {showOjsReimport && !readOnly && (
+          <Button
+            small
+            secondary
+            onClick={handleOjsReimport}
+            title={t('ojs.reimport.buttonTitle')}
+            className={styles.ojsReimportButton}
+          >
+            <RefreshCw size={16} />
+            {t('ojs.reimport.buttonText')}
+          </Button>
+        )}
       </div>
       <Form
         readOnly={readOnly}
