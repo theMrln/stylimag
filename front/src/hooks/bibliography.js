@@ -1,6 +1,8 @@
-import debounce from 'lodash.debounce'
 import { useEffect, useRef, useState } from 'react'
-import { BibliographyCompletionProvider } from '../components/Write/providers/monaco/support.js'
+
+import debounce from 'lodash.debounce'
+
+import { BibliographyCompletionProvider } from '../components/organisms/bibliography/support.js'
 import { validate } from '../helpers/bibtex.js'
 
 export const validationResultInitialState = (text) => {

@@ -1,7 +1,6 @@
 import { Check, Copy } from 'lucide-react'
-import React from 'react'
 
-import Button from '../components/atoms/Button.jsx'
+import { Button } from '../components/atoms/index.js'
 
 export default function ButtonStory() {
   return (

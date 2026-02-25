@@ -1,0 +1,28 @@
+.container {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  border: none;
+  background: none;
+  border-radius: 0.75rem;
+  padding: 0.5rem 0.75rem;
+}
+
+.selected {
+  background-color: #636363;
+  color: white;
+}
+
+.text {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.external::after {
+  content: '↗';
+  display: block;
+}
+
+.hide {
+  display: none;
+}

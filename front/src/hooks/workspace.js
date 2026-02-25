@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { useSelector } from 'react-redux'
 import { useParams } from 'react-router'
 
@@ -21,7 +22,6 @@ import {
  * In order of priority:
  * - URL
  * - redux store
- *
  * @returns {string|undefined}
  */
 export function useActiveWorkspaceId() {
@@ -190,13 +190,25 @@ export function useWorkspaceActions() {
 }
 
 export function useWorkspaces() {
-  const { data, error, isLoading } = useFetchData({
-    query: getWorkspaces,
-  })
+  const { data, error, isLoading } = useFetchData(
+    {
+      query: getWorkspaces,
+    },
+    {
+      fallbackData: {
+        workspaces: [],
+      },
+    }
+  )
 
   return {
     workspaces: data?.workspaces,
     error,
     isLoading,
   }
+}
+
+export function useWorkspaceName({ workspace }) {
+  const { t: tWorkspace } = useTranslation('workspace', { useSuspense: false })
+  return workspace?.name ?? tWorkspace('myspace.name')
 }

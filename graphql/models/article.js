@@ -38,6 +38,10 @@ const articleSchema = new Schema(
       type: String,
       default: '',
     },
+    nakalaLink: {
+      type: String,
+      default: '',
+    },
     workingVersion: {
       ydoc: {
         type: Object,
@@ -114,14 +118,18 @@ articleSchema.statics.complete = async function complete(articles, loaders) {
 
 /**
  * Get populated articles.
- * @param {{ filter: {}, loaders: { users, tags } }} context
+ * @param {{ filter: {}, options: {}, loaders: { users, tags } }} context
  * @returns {Promise<Article[]>}
  */
 articleSchema.statics.getArticles = async function getArticles({
   filter,
+  options = {},
   loaders,
 }) {
-  const articles = await this.find(filter).sort({ updatedAt: -1 }).lean()
+  options = options || {}
+  const articles = await this.find(filter, null, options)
+    .sort({ updatedAt: -1 })
+    .lean()
   return this.complete(articles, loaders)
 }
 
@@ -170,10 +178,7 @@ articleSchema.methods.shareWith = async function shareWith(user) {
 
   this.contributors.push({ user, roles: ['read', 'write'] })
 
-  return Promise.all([
-    this.save({ timestamps: false }),
-    user.save({ timestamps: false }),
-  ])
+  return this.save({ timestamps: false })
 }
 
 articleSchema.methods.unshareWith = async function shareWith(user) {
@@ -183,14 +188,7 @@ articleSchema.methods.unshareWith = async function shareWith(user) {
     ({ user: u }) => u.equals(user) === false
   )
 
-  // we keep it for legacy sake
-  // because technically, we do not push the article in the user's list
-  user.articles.pull(this)
-
-  return Promise.all([
-    this.save({ timestamps: false }),
-    user.save({ timestamps: false }),
-  ])
+  return this.save({ timestamps: false })
 }
 
 articleSchema.methods.createNewVersion = async function createNewVersion({
@@ -222,45 +220,38 @@ articleSchema.methods.createNewVersion = async function createNewVersion({
   return createdVersion
 }
 
-articleSchema.pre('remove', async function () {
-  await this.populate('owner')
+articleSchema.pre(
+  'deleteOne',
+  { document: true, query: false },
+  async function () {
+    await this.populate('owner')
 
-  const session = await this.db.startSession()
+    const session = await this.db.startSession()
 
-  await session.withTransaction(async () => {
-    // remove article from nested owner articles
-    this.owner.articles.pull(this.id)
-    await this.owner.save()
+    try {
+      await session.withTransaction(async () => {
+        // remove article from tags owned by this user
+        await Tag.updateMany(
+          { owner: this.owner.id },
+          { $pull: { articles: this.id } },
+          { safe: true }
+        )
 
-    // remove article from tags owned by this user
-    await Tag.updateMany(
-      { owner: this.owner.id },
-      { $pull: { articles: this.id } },
-      { safe: true }
-    )
+        // remove versions associated with this article
+        const versions = this.versions
+        for (const versionId of versions) {
+          await Version.findByIdAndDelete(versionId)
+        }
 
-    // remove versions associated with this article
-    const versions = this.versions
-    for (const versionId of versions) {
-      await Version.findByIdAndDelete(versionId)
+        // remove article from corpuses
+        await this.model('Corpus').removeArticle(this.id)
+        // remove article from workspaces
+        await this.model('Workspace').removeArticle(this.id)
+      })
+    } finally {
+      await session.endSession()
     }
-
-    // remove article from corpuses
-    await this.model('Corpus').removeArticle(this.id)
-    // remove article from workspaces
-    await this.model('Workspace').removeArticle(this.id)
-  })
-
-  await session.commitTransaction()
-  return session.endSession()
-})
-
-articleSchema.post('remove', async function () {
-  await this.model('User').updateOne(
-    { _id: this.owner?.id || this.owner },
-    { $pull: { articles: this.id } },
-    { safe: true }
-  )
-})
+  }
+)
 
 module.exports = mongoose.model('Article', articleSchema)

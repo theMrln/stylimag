@@ -1,0 +1,17 @@
+@use '../../../styles/defaults' as *;
+@use '../../../styles/variables' as *;
+
+.toggle {
+  margin-top: 1rem;
+}
+
+.form {
+  :global {
+    label {
+      display: block;
+      font-weight: 500;
+      padding-bottom: 0.15rem;
+      font-size: 0.875rem;
+    }
+  }
+}

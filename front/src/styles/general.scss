@@ -74,9 +74,15 @@ small {
     cursor: pointer;
   }
 
+  pre {
+    font-size: 0.9rem;
+    margin: 0.15rem 0;
+  }
+
   button,
   textarea {
     font-family: 'Inter', serif;
+    font-size: 1rem;
   }
 
   textarea {
@@ -174,9 +180,7 @@ input[type='search']::-webkit-search-results-decoration {
 
 .icon {
   margin-right: 0.25em;
-  height: 1.2em;
   vertical-align: middle;
-  width: 1.2em;
 }
 
 input:read-only,
@@ -204,9 +208,26 @@ select:disabled {
   }
 }
 
-
 .yRemoteSelectionHead {
   position: absolute;
   height: 100%;
   box-sizing: border-box;
+}
+
+#root {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+#content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+// otherwise tooltips overlap the buttons and flicker.
+// ref: https://github.com/EcrituresNumeriques/stylo/issues/1837
+.monaco-editor .find-widget {
+  right: 40px !important;
 }

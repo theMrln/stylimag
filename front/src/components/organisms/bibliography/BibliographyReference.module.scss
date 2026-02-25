@@ -1,0 +1,59 @@
+@use '../../../styles/defaults' as *;
+@use '../../../styles/variables' as *;
+
+.container {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+}
+
+.content {
+  display: flex;
+  gap: 0.5rem;
+  flex-direction: column;
+  overflow: hidden;
+  flex: 1;
+
+  > header {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+  }
+}
+
+.identifier {
+  display: flex;
+  gap: 0.5rem;
+
+  > pre {
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    overflow: hidden;
+  }
+}
+
+.icon {
+  width: 1rem;
+  height: 1rem;
+}
+
+.title {
+  font-size: 1rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+
+  > span {
+    display: flex;
+  }
+
+  > span:not(:last-child)::after {
+    content: '|';
+    display: block;
+  }
+}
+
+.actions {
+  display: flex;
+}

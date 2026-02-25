@@ -1,8 +1,7 @@
 import { merge } from 'allof-merge'
 import { useSelector } from 'react-redux'
 
-import { toYaml } from '../components/Write/metadata/yaml.js'
-import { toEntries } from '../helpers/bibtex.js'
+import { toYaml } from '../components/organisms/metadata/yaml.js'
 import { executeQuery } from '../helpers/graphQL.js'
 import { clean } from '../schemas/schemas.js'
 import useFetchData, {
@@ -18,16 +17,20 @@ import {
   getArticleTags,
   getEditableArticle,
   removeTags,
-  renameArticle,
+  setNakalaLink,
+  setZoteroLink,
+  updateArticle,
+  updateArticleBibliography,
   updateWorkingVersion,
-  updateZoteroLinkMutation,
 } from './Article.graphql'
+import { createArticle, getWorkspaceArticles } from './Articles.graphql'
 import {
   createVersion,
   getArticleVersion,
   getArticleVersions,
   renameVersion,
 } from './Versions.graphql'
+import { getArticleWorkspaces } from './Workspaces.graphql'
 
 export function useArticleTagActions({ articleId }) {
   const sessionToken = useSelector((state) => state.sessionToken)
@@ -90,9 +93,59 @@ export function useArticleTagActions({ articleId }) {
   }
 }
 
-export function useArticleActions({ articleId }) {
+export function useArticlesActions({ activeWorkspaceId }) {
+  const sessionToken = useSelector((state) => state.sessionToken)
+  const { mutate: mutateArticles } = useMutateData({
+    query: getWorkspaceArticles,
+    variables: {
+      workspaceId: activeWorkspaceId,
+      isPersonalWorkspace: !activeWorkspaceId,
+      filter: {
+        workspaceId: activeWorkspaceId,
+      },
+    },
+  })
+  const create = async (createInput) => {
+    const { createArticle: createdArticle } = await executeQuery({
+      query: createArticle,
+      variables: { createArticleInput: createInput },
+      sessionToken,
+      type: 'mutation',
+    })
+    await mutateArticles(async (data) => {
+      console.log({ data })
+      return {
+        ...data,
+        articles: [createdArticle, ...data.articles],
+        workspace: {
+          ...data.workspace,
+          articles: [createdArticle, ...data.articles],
+        },
+      }
+    })
+  }
+  return {
+    create,
+  }
+}
+
+export function useArticleActions({ articleId, activeWorkspaceId }) {
   const sessionToken = useSelector((state) => state.sessionToken)
   const activeUser = useSelector((state) => state.activeUser)
+  const { mutate: mutateArticleWorkspaces } = useMutateData({
+    query: getArticleWorkspaces,
+    variables: { articleId },
+  })
+  const { mutate: mutateArticles } = useMutateData({
+    query: getWorkspaceArticles,
+    variables: {
+      workspaceId: activeWorkspaceId,
+      isPersonalWorkspace: !activeWorkspaceId,
+      filter: {
+        workspaceId: activeWorkspaceId,
+      },
+    },
+  })
   const copy = async (toUserId) => {
     return await executeQuery({
       query: duplicateArticle,
@@ -105,8 +158,8 @@ export function useArticleActions({ articleId }) {
       type: 'mutation',
     })
   }
-  const duplicate = async () => {
-    return await executeQuery({
+  const duplicate = async (article) => {
+    const result = await executeQuery({
       query: duplicateArticle,
       variables: {
         user: activeUser._id,
@@ -116,29 +169,81 @@ export function useArticleActions({ articleId }) {
       sessionToken,
       type: 'mutation',
     })
-  }
-  const rename = async (title) => {
-    return await executeQuery({
-      query: renameArticle,
-      variables: { user: activeUser._id, articleId, title },
-      sessionToken,
-      type: 'mutation',
+    const duplicatedArticle = {
+      ...article,
+      ...result.duplicateArticle,
+      contributors: [],
+      versions: [],
+    }
+    await mutateArticles(async (data) => {
+      return {
+        ...data,
+        articles: [duplicatedArticle, ...(data?.articles ?? [])],
+        workspace: {
+          ...(data?.workspace ?? {}),
+          articles: [duplicatedArticle, ...(data?.articles ?? [])],
+        },
+      }
     })
   }
   const remove = async () => {
-    return await executeQuery({
+    await executeQuery({
       query: deleteArticle,
       variables: { articleId },
       sessionToken,
       type: 'mutation',
+    })
+    await mutateArticles(async (data) => {
+      const updatedArticles =
+        data?.articles?.filter((article) => article._id !== articleId) ?? []
+      return {
+        ...data,
+        articles: updatedArticles,
+        workspace: {
+          ...data.workspace,
+          articles: updatedArticles,
+        },
+      }
+    })
+  }
+  const update = async (article, { title, tags, workspaces }) => {
+    const response = await executeQuery({
+      sessionToken,
+      query: updateArticle,
+      variables: {
+        updateArticleInput: {
+          id: articleId,
+          title,
+          tags,
+          workspaces,
+        },
+      },
+    })
+    const updatedArticle = {
+      ...article,
+      ...response.updateArticle,
+    }
+    await mutateArticleWorkspaces()
+    await mutateArticles(async (data) => {
+      const updatedArticles = data.articles.map((article) =>
+        article._id === updatedArticle._id ? updatedArticle : article
+      )
+      return {
+        ...data,
+        articles: updatedArticles,
+        workspace: {
+          ...data.workspace,
+          articles: updatedArticles,
+        },
+      }
     })
   }
 
   return {
     copy,
     duplicate,
-    rename,
     remove,
+    update,
   }
 }
 
@@ -296,21 +401,23 @@ export function useEditableArticle({ articleId, versionId }) {
     }
   )
 
-  const updateBibliography = async (bib) => {
+  const updateBibliography = async (bibtex) => {
     if (hasVersion) {
       // can only update the bibliography on the working copy
       return
     }
-    await executeQuery({
+    const result = await executeQuery({
       sessionToken,
-      query: updateWorkingVersion,
+      query: updateArticleBibliography,
       variables: {
-        userId: activeUser._id,
-        articleId: articleId,
-        content: { bib },
+        input: {
+          articleId,
+          bib: bibtex,
+        },
       },
       type: 'mutate',
     })
+    const bibliography = result.updateArticleBibliography
     await mutate(
       async (data) => {
         return {
@@ -318,7 +425,8 @@ export function useEditableArticle({ articleId, versionId }) {
             ...data.article,
             workingVersion: {
               ...data.article.workingVersion,
-              bib,
+              bib: bibtex,
+              bibliography,
             },
           },
         }
@@ -330,7 +438,7 @@ export function useEditableArticle({ articleId, versionId }) {
   const updateZoteroLink = async (url) => {
     await executeQuery({
       sessionToken,
-      query: updateZoteroLinkMutation,
+      query: setZoteroLink,
       variables: {
         articleId: articleId,
         url,
@@ -350,18 +458,44 @@ export function useEditableArticle({ articleId, versionId }) {
     )
   }
 
-  const bibtext = hasVersion
+  const updateNakalaLink = async (url) => {
+    await executeQuery({
+      sessionToken,
+      query: setNakalaLink,
+      variables: {
+        articleId: articleId,
+        url,
+      },
+      type: 'mutate',
+    })
+    await mutate(
+      async (data) => {
+        return {
+          article: {
+            ...data.article,
+            nakalaLink: url,
+          },
+        }
+      },
+      { revalidate: false }
+    )
+  }
+
+  const bibtex = hasVersion
     ? (data?.article?.version?.bib ?? '')
     : (data?.article?.workingVersion?.bib ?? '')
 
-  const entries = toEntries(bibtext)
+  const entries = hasVersion
+    ? (data?.article?.version?.bibliography ?? [])
+    : (data?.article?.workingVersion?.bibliography ?? [])
 
   return {
     article: data?.article,
     updateBibliography,
     updateZoteroLink,
+    updateNakalaLink,
     bibliography: {
-      bibtext,
+      bibtex,
       entries,
     },
     isLoading,

@@ -1,5 +1,4 @@
 import { Bean } from 'lucide-react'
-import React from 'react'
 import { describe, expect, test, vi } from 'vitest'
 
 import { render } from '@testing-library/react'
@@ -35,7 +34,7 @@ describe('Field', () => {
   })
 
   test('renders with an icon', () => {
-    const { getByRole } = render(<Component icon={Bean} label="Haricot" />)
+    const { getByRole } = render(<Component icon={<Bean />} label="Haricot" />)
 
     const field = getByRole('textbox')
     const iconElement = field.nextElementSibling

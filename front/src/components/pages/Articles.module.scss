@@ -1,0 +1,93 @@
+@use '../../styles/defaults' as *;
+@use '../../styles/variables' as *;
+
+.articleCounter {
+  font-size: 1.5rem;
+  font-weight: 600;
+  padding-bottom: 0.5rem;
+}
+
+.section {
+  @extend .wrapped-center;
+  padding: 2rem;
+  border: 1px solid $main-border-color;
+  background-color: $extra-background-color;
+
+  > h1 {
+    margin-bottom: 1rem;
+  }
+
+  > p {
+    margin-bottom: 1rem;
+  }
+
+  article:nth-of-type(2n + 1) {
+    background-color: $alternate-row-color;
+  }
+}
+
+.pageHeader {
+  display: flex;
+  column-gap: 1rem;
+  row-gap: 0.5rem;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+
+.pageTitle {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  flex: 1;
+}
+
+.articlesHeader {
+  display: flex;
+  column-gap: 1rem;
+  align-items: center;
+}
+
+.filtersContainer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+}
+
+.filtersTags {
+  border: none;
+  padding: 0;
+}
+
+.button {
+  white-space: nowrap;
+}
+
+.search {
+  flex: 1;
+  min-width: 400px;
+  @media screen and (min-width: $large-screen-breakpoint) {
+    & {
+      max-width: 550px;
+    }
+  }
+}
+
+.searchField {
+  input {
+    width: 100%;
+  }
+}
+
+.previewContainer {
+  border: none;
+  width: 100%;
+  height: 100vh;
+  display: flex;
+}
+
+.articlesTableHeader {
+  display: flex;
+  align-items: center;
+  margin-bottom: 0.5em;
+}

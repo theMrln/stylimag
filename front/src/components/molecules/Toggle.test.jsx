@@ -1,7 +1,8 @@
 import { describe, expect, test, vi } from 'vitest'
-import { fireEvent, render } from '@testing-library/react'
+
+import { render } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import React from 'react'
+
 import Component from './Toggle.jsx'
 
 describe('Toggle', () => {
@@ -27,7 +28,9 @@ describe('Toggle', () => {
     const user = userEvent.setup()
     const onChange = vi.fn()
 
-    const { getByLabelText } = render(<Component onChange={onChange}>label</Component>)
+    const { getByLabelText } = render(
+      <Component onChange={onChange}>label</Component>
+    )
 
     const el = getByLabelText('label')
     await user.click(el)
@@ -39,7 +42,9 @@ describe('Toggle', () => {
 
   test('w/ a11y labels', async () => {
     const user = userEvent.setup()
-    const { getByLabelText } = render(<Component labels={{true: 'Oui', false: 'Non'}}/>)
+    const { getByLabelText } = render(
+      <Component labels={{ true: 'Oui', false: 'Non' }} />
+    )
 
     const el = getByLabelText('Non')
     await user.click(el)

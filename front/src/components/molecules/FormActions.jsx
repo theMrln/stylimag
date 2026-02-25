@@ -1,7 +1,6 @@
-import React from 'react'
 import { useTranslation } from 'react-i18next'
 
-import Button from '../atoms/Button.jsx'
+import { Button } from '../atoms/index.js'
 
 import styles from './FormActions.module.scss'
 
@@ -14,12 +13,12 @@ import styles from './FormActions.module.scss'
  */
 
 /**
- * @param props
- * @param {function} props.onSubmit
- * @param {function} props.onCancel
+ * @param {object} props
+ * @param {(() => void)=} props.onSubmit
+ * @param {() => void} props.onCancel
  * @param {ButtonInfo|undefined} props.cancelButton
  * @param {ButtonInfo|undefined} props.submitButton
- * @constructor
+ * @class
  */
 export default function FormActions({
   onSubmit,
@@ -29,7 +28,7 @@ export default function FormActions({
 }) {
   const { t } = useTranslation()
   return (
-    <div className={styles.actions}>
+    <footer className={styles.actions}>
       <Button
         onClick={onCancel}
         secondary
@@ -47,6 +46,6 @@ export default function FormActions({
       >
         {t(submitButton?.text ?? 'modal.confirmButton.text')}
       </Button>
-    </div>
+    </footer>
   )
 }

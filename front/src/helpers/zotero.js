@@ -1,4 +1,5 @@
 import LinkHeader from 'http-link-header'
+
 import { filter } from './bibtex'
 
 const baseApiUrl = 'https://api.zotero.org/'
@@ -95,7 +96,7 @@ export function isWebUrl(url) {
 
 /**
  * Get the next link from headers.
- * @param headers HTTP headers (from a response)
+ * @param {Headers} headers HTTP headers (from a response)
  * @returns {URL|null}
  */
 function getNextLink(headers) {
@@ -129,7 +130,7 @@ function copySearchParams(from, to) {
  *
  * @param {URL} initialUrl
  * @param {'json' | 'text'} resolveAs
- * @returns {Generator<string[]|Object[]>} a list of aggregated responses
+ * @returns {Generator<string[] | object[]>} a list of aggregated responses
  */
 async function fetchAll(initialUrl, resolveAs = 'json') {
   const agg = []
@@ -305,7 +306,7 @@ export async function toApiUrl(plainUrl, token) {
   }
 
   if (strategy === 'WEB' && username) {
-    const user = await fetchUserFromToken()
+    const user = await fetchUserFromToken(token)
 
     if (user.username !== username) {
       throw new Error('Cannot fetch another member personal library')
@@ -314,7 +315,10 @@ export async function toApiUrl(plainUrl, token) {
     userId = user.userID
   }
 
-  if (strategy === 'WEB' && ['library', 'collection', 'items-list'].includes(action)) {
+  if (
+    strategy === 'WEB' &&
+    ['library', 'collection', 'items-list'].includes(action)
+  ) {
     action = 'items'
   }
 

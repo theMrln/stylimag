@@ -100,7 +100,7 @@ module.exports = {
       if (data) {
         try {
           JSON.parse(data.trim())
-        } catch (e) {
+        } catch {
           throw new BadRequestError(
             'INVALID_INPUT',
             'formMetadata.data must be a valid JSON.'
@@ -110,7 +110,7 @@ module.exports = {
       if (ui) {
         try {
           JSON.parse(ui.trim())
-        } catch (e) {
+        } catch {
           throw new BadRequestError(
             'INVALID_INPUT',
             'formMetadata.ui must be a valid JSON.'
@@ -213,8 +213,8 @@ module.exports = {
 
       // TODO: remove workspace if there's no member left!
       return Workspace.findOneAndUpdate(
-        { _id: ObjectId(workspace._id) },
-        { $pull: { members: { user: ObjectId(user.id) } } },
+        { _id: new ObjectId(workspace._id) },
+        { $pull: { members: { user: new ObjectId(user.id) } } },
         { lean: true }
       )
     },

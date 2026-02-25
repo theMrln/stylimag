@@ -1,4 +1,3 @@
-import React from 'react'
 import clsx from 'clsx'
 import { Loader } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
@@ -6,7 +5,7 @@ import { useTranslation } from 'react-i18next'
 import styles from './Loading.module.scss'
 
 /**
- * @param props
+ * @param {object} props
  * @param {string=} props.className
  * @param {string=} props.label translation label
  * @param {string=} props.size (default: '1rem')

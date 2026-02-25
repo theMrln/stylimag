@@ -18,15 +18,18 @@ const { previewEntries } = require('../helpers/bibliography.js')
 const { logger } = require('../logger.js')
 const { toLegacyFormat } = require('../helpers/metadata.js')
 const Y = require('yjs')
-const { mongo } = require('mongoose')
+const mongoose = require('mongoose')
 const Sentry = require('@sentry/node')
 const {
   NotAuthenticatedError,
   BadRequestError,
 } = require('../helpers/errors.js')
+const { toEntries } = require('../helpers/bibtex')
 
 function getTextFromYjsDoc(yjsdocBase64) {
-  const wsDoc = new WSSharedDoc(`ws/${new mongo.ObjectID().toString()}`)
+  const wsDoc = new WSSharedDoc(
+    `ws/${new mongoose.Types.ObjectId().toString()}`
+  )
   try {
     Y.applyUpdate(wsDoc, Buffer.from(yjsdocBase64, 'base64'))
     return wsDoc.getText('main').toString()
@@ -159,8 +162,48 @@ async function createVersion(article, { major, message, userId, type }) {
   return true
 }
 
+function eqSet(a, b) {
+  return a.size === b.size && a.intersection(b).size === a.size
+}
+
 module.exports = {
   Mutation: {
+    /**
+     * Update an article as the current user
+     * @param {null} _root
+     * @param {*} args
+     * @param {{ userId, token }} context
+     */
+    async updateArticle(_root, args, context) {
+      const { id, title, tags, workspaces } = args.updateArticleInput
+      const article = await getArticleByContext(id, context)
+      if (title) {
+        article.title = title
+      }
+      if (Array.isArray(tags)) {
+        article.tags = tags
+      }
+      if (Array.isArray(workspaces)) {
+        const currentWorkspaces = await Workspace.findByArticleId(id)
+        const currentWorkspacesSet = new Set(
+          currentWorkspaces.map((w) => w._id.toString())
+        )
+        const workspacesSet = new Set(workspaces)
+        if (!eqSet(workspacesSet, currentWorkspacesSet)) {
+          const additions = workspacesSet.difference(currentWorkspacesSet)
+          for (const additionWorkspaceId of additions) {
+            await Workspace.addArticle(additionWorkspaceId, article._id)
+          }
+          const deletions = currentWorkspacesSet.difference(workspacesSet)
+          for (const deletionWorkspaceId of deletions) {
+            await Workspace.deleteArticle(deletionWorkspaceId, article._id)
+          }
+        }
+      }
+      await article.save()
+      return article.populate('tags')
+    },
+
     /**
      * Create an article as the current user
      * @param {null} _root
@@ -204,8 +247,6 @@ module.exports = {
         }
       }
 
-      user.articles.push(newArticle)
-      await user.save()
       return newArticle
     },
 
@@ -269,9 +310,7 @@ module.exports = {
       })
 
       newArticle.isNew = true
-      withUser.articles.push(newArticle)
-
-      await Promise.all([newArticle.save(), withUser.save()])
+      await newArticle.save()
 
       // Maintain links
       await Corpus.updateMany(
@@ -285,6 +324,14 @@ module.exports = {
       )
 
       return newArticle
+    },
+
+    async updateArticleBibliography(_root, args, context) {
+      const { articleId, bib } = args.input
+      const article = await getArticleByContext(articleId, context)
+      article.set('workingVersion.bib', bib)
+      await article.save()
+      return toEntries(bib)
     },
   },
 
@@ -393,8 +440,8 @@ module.exports = {
      * @returns {boolean} true if the article was deleted, false otherwise
      */
     async delete(article) {
-      await article.remove()
-      return article.$isDeleted()
+      await article.deleteOne()
+      return true
     },
 
     async rename(article, { title }) {
@@ -405,6 +452,12 @@ module.exports = {
 
     async setZoteroLink(article, { zotero }) {
       article.set('zoteroLink', zotero)
+      const result = await article.save({ timestamps: false })
+      return result === article
+    },
+
+    async setNakalaLink(article, { nakala }) {
+      article.set('nakalaLink', nakala)
       const result = await article.save({ timestamps: false })
       return result === article
     },
@@ -469,6 +522,9 @@ module.exports = {
     },
     bibPreview({ bib }) {
       return previewEntries(bib)
+    },
+    bibliography({ bib = '' }) {
+      return toEntries(bib)
     },
     yaml({ metadata = {} }, { options }) {
       const legacyMetadata = toLegacyFormat(metadata)

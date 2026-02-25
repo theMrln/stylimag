@@ -38,13 +38,12 @@ process.env.YPERSISTENCE = config.get(
 )
 
 const express = require('express')
-const bodyParser = require('body-parser')
 const { createHandler } = require('graphql-http/lib/use/express')
 const mongoose = require('mongoose')
 const cors = require('cors')
 
 const session = require('express-session')
-const MongoStore = require('connect-mongo')
+const { MongoStore } = require('connect-mongo')
 const passport = require('passport')
 const { logger } = require('./logger')
 const pino = require('pino-http')({
@@ -72,7 +71,6 @@ const Y = require('yjs')
 const yjsUtils = require('@y/websocket-server/utils')
 const WebSocket = require('ws')
 const { handleEvents } = require('./events')
-const { mongo } = require('mongoose')
 const wss = new WebSocket.Server({ noServer: true })
 
 const jwtSecret = config.get('security.jwt.secret')
@@ -110,12 +108,8 @@ const corsOptions = {
 /*
  * Setup database
  */
-mongoose.set('strictQuery', false)
 const mongooseP = mongoose
-  .connect(config.get('mongo.databaseUrl'), {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-  })
+  .connect(config.get('mongo.databaseUrl'))
   .then((m) => m.connection.getClient())
 
 /*
@@ -162,7 +156,7 @@ app.set('trust proxy', true)
 app.set('x-powered-by', false)
 app.use(pino)
 app.use(cors(corsOptions))
-app.use(bodyParser.json({ limit: '50mb' }))
+app.use(express.json({ limit: '50mb' }))
 app.use(session(sessionOptions))
 
 app.use(passport.session(sessionOptions))
@@ -252,6 +246,9 @@ app.use(
   })
 )
 
+/* Nakala */
+app.use('/nakala', proxy(config.get('nakala.apiUrl')))
+
 /*
  * GraphQL interface
  */
@@ -287,7 +284,7 @@ yjsUtils.setPersistence({
       const articleId = roomName.split('/')[1] // format: ws/{articleId}
       const result = await mongoose.connection.collection('articles').findOne({
         $and: [
-          { _id: new mongo.ObjectID(articleId) },
+          { _id: new mongoose.Types.ObjectId(articleId) },
           { 'workingVersion.ydoc': { $ne: null } },
         ],
       })
@@ -315,7 +312,7 @@ yjsUtils.setPersistence({
             try {
               const documentState = Y.encodeStateAsUpdate(ydoc) // is a Uint8Array
               await mongoose.connection.collection('articles').updateOne(
-                { _id: new mongo.ObjectID(articleId) },
+                { _id: new mongoose.Types.ObjectId(articleId) },
                 {
                   $set: {
                     'workingVersion.ydoc':

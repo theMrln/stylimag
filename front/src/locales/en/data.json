@@ -1,0 +1,19 @@
+{
+  "actions": {
+    "fetch": {
+      "collection": "Replace current data with this collection",
+      "errors": {
+        "humanid.missing": "Fetching data from Nakala requires a HumanID account."
+      },
+      "fromAccount": {
+        "title": "Fetch from my account"
+      },
+      "fromUrl": {
+        "description": "This URL must be a public collection.",
+        "title": "Fetch from a URL"
+      },
+      "label": "Fetch data from Nakala"
+    }
+  },
+  "title": "Data"
+}

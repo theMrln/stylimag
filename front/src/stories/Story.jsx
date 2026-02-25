@@ -1,24 +1,33 @@
-import React from 'react'
-
 import i18n from '../i18n.js'
 
-import CreatedByLabel from '../components/atoms/CreatedByLabel.jsx'
-import PageTitle from '../components/atoms/PageTitle.jsx'
-import UpdatedAtLabel from '../components/atoms/UpdatedAtLabel.jsx'
-import CollaborativeEditorWebSocketStatus from '../components/collaborative/CollaborativeEditorWebSocketStatus.jsx'
-import Alert from '../components/molecules/Alert.jsx'
-import Avatar from '../components/molecules/Avatar.jsx'
-import Loading from '../components/molecules/Loading.jsx'
-import Version from '../components/molecules/Version.jsx'
+import {
+  Button,
+  CreatedByLabel,
+  PageTitle,
+  UpdatedAtLabel,
+} from '../components/atoms/index.js'
+import {
+  Alert,
+  Avatar,
+  Combobox,
+  FormActions,
+  Loading,
+  Modal,
+  Version,
+} from '../components/molecules/index.js'
+import { useModal } from '../hooks/modal.js'
+
+import CollaborativeEditorWebSocketStatus from '../components/organisms/textEditor/CollaborativeEditorWebSocketStatus.jsx'
 import ButtonStory from './Button.story.jsx'
 import FormStory from './Form.story.jsx'
-import SidebarStory from './Sidebar.story.jsx'
 
 import buttonStyles from '../components/atoms/Button.module.scss'
 import styles from '../layout.module.scss'
 import storyStyles from './story.module.scss'
 
 export default function Story() {
+  const modalText = useModal()
+  const modalForm = useModal()
   return (
     <div className={styles.container}>
       <section aria-label="Typographie">
@@ -187,10 +196,6 @@ export default function Story() {
         <FormStory />
       </section>
 
-      <section aria-label="Barre latérale">
-        <SidebarStory />
-      </section>
-
       <section aria-label="Éditeur de texte">
         <h4>Statuts</h4>
         <h5>Connecté</h5>
@@ -245,6 +250,35 @@ export default function Story() {
         <CreatedByLabel name={"Nom de l'utilisateur"} />
         <br />
         <UpdatedAtLabel date={new Date()} />
+      </section>
+
+      <section aria-label="Dialogues">
+        <Button onClick={() => modalText.show()}>
+          Ouvrir un dialogue avec du texte
+        </Button>
+        <Modal {...modalText.bindings}>Bonjour :)</Modal>
+
+        <Button onClick={() => modalForm.show()}>
+          Ouvrir un dialogue avec un formulaire
+        </Button>
+        <Modal {...modalForm.bindings}>
+          <Combobox
+            onChange={() => {}}
+            items={[
+              {
+                key: '1',
+                name: 'Bonjour',
+                index: 1,
+              },
+              {
+                key: '2',
+                name: 'Salut',
+                index: 2,
+              },
+            ]}
+          />
+          <FormActions></FormActions>
+        </Modal>
       </section>
     </div>
   )

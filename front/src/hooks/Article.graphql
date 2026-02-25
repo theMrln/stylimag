@@ -11,10 +11,19 @@ fragment basicVersionFields on Version {
   revision
   version
 }
+
 fragment articleVersionFields on Version {
   name
   md
   bib
+  bibliography {
+    authorName
+    date
+    entry
+    key
+    title
+    type
+  }
   yaml(options: { strip_markdown: true })
 }
 
@@ -41,10 +50,19 @@ fragment editableArticleFields on Article {
   workingVersion {
     md
     bib
+    bibliography {
+      authorName
+      date
+      entry
+      key
+      title
+      type
+    }
     yaml(options: { strip_markdown: true })
   }
 
   zoteroLink
+  nakalaLink
 }
 
 fragment previewArticleFields on Article {
@@ -57,15 +75,27 @@ fragment previewArticleFields on Article {
   }
 }
 
-query renameArticle($articleId: ID!, $title: String!) {
-  article(article: $articleId) {
-    rename(title: $title)
+mutation updateArticle($updateArticleInput: UpdateArticleInput!) {
+  updateArticle(updateArticleInput: $updateArticleInput) {
+    _id
+    title
+    tags {
+      _id
+      name
+      color
+    }
   }
 }
 
-query updateZoteroLinkMutation($articleId: ID!, $url: String!) {
+query setZoteroLink($articleId: ID!, $url: String!) {
   article(article: $articleId) {
     setZoteroLink(zotero: $url)
+  }
+}
+
+query setNakalaLink($articleId: ID!, $url: String!) {
+  article(article: $articleId) {
+    setNakalaLink(nakala: $url)
   }
 }
 
@@ -109,6 +139,17 @@ mutation duplicateArticle($user: ID, $articleId: ID!, $to: ID!) {
     title
     createdAt
     updatedAt
+  }
+}
+
+mutation updateArticleBibliography($input: UpdateArticleBibliographyInput!) {
+  updateArticleBibliography(input: $input) {
+    authorName
+    date
+    entry
+    key
+    title
+    type
   }
 }
 

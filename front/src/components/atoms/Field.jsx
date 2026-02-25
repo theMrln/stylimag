@@ -1,5 +1,5 @@
 import clsx from 'clsx'
-import React, { forwardRef, useEffect, useId, useRef } from 'react'
+import { forwardRef, useEffect, useId, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import styles from './Field.module.scss'
@@ -14,6 +14,7 @@ export default forwardRef(function Field(
     id = useId(),
     type = 'text',
     autoFocus = false,
+    isLoading = false,
     ...otherProps
   },
   forwardedRef
@@ -26,6 +27,8 @@ export default forwardRef(function Field(
     className && className,
     hasError && styles.error
   )
+
+  const { icon, ...inputProps } = otherProps
 
   useEffect(() => {
     if (autoFocus) {
@@ -45,24 +48,37 @@ export default forwardRef(function Field(
           )}
         </label>
       )}
-      <div className={clsx('control', otherProps.icon && 'has-icons-left')}>
+
+      <div className={clsx('control', icon && 'has-icons-left')}>
         {children && { ...children }}
-        {!children && (
-          <>
-            <input
-              {...otherProps}
-              id={id}
-              required={otherProps.required || mandatory}
-              className="input"
-              type={type}
-              ref={inputRef}
-            />
-            {otherProps.icon && (
-              <span className="icon is-small is-left" aria-hidden>
-                <otherProps.icon />
-              </span>
-            )}
-          </>
+
+        {!children && type === 'textarea' && (
+          <textarea
+            {...inputProps}
+            id={id}
+            required={otherProps.required || mandatory}
+            className="input"
+            ref={inputRef}
+            disabled={isLoading}
+          />
+        )}
+
+        {!children && type !== 'textarea' && (
+          <input
+            {...inputProps}
+            id={id}
+            required={otherProps.required || mandatory}
+            className="input"
+            type={type}
+            ref={inputRef}
+            disabled={isLoading}
+          />
+        )}
+
+        {!children && icon && (
+          <span className="icon is-small is-left" aria-hidden>
+            {icon}
+          </span>
         )}
       </div>
     </div>

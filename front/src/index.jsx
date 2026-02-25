@@ -25,17 +25,17 @@ import './styles/general.scss'
 import createStore from './createReduxStore.js'
 import { getUserProfile } from './helpers/user.js'
 
-import AuthCallback from './components/AuthCallback.jsx'
-import LoadingPage from './components/LoadingPage.jsx'
-import Login, { Logout } from './components/Login.jsx'
-import RequireAuth from './components/PrivateRoute.jsx'
-import RedirectIfAuth from './components/auth/RedirectIfAuth.jsx'
+import App, { loader as AppLoader } from './components/pages/App.jsx'
 import CollaborativeEditor, {
   loader as ArticleLoader,
-} from './components/collaborative/CollaborativeEditor.jsx'
-import NotFound from './components/errors/404.jsx'
-import ErrorBoundary from './components/errors/AppError.jsx'
-import App, { loader as AppLoader } from './layouts/App.jsx'
+} from './components/pages/CollaborativeEditor.jsx'
+import LoadingPage from './components/pages/LoadingPage.jsx'
+import RequireAuth from './components/pages/PrivateRoute.jsx'
+import AuthCallback from './components/pages/auth/AuthCallback.jsx'
+import Login, { Logout } from './components/pages/auth/Login.jsx'
+import RedirectIfAuth from './components/pages/auth/RedirectIfAuth.jsx'
+import NotFound from './components/pages/errors/404.jsx'
+import ErrorBoundary from './components/pages/errors/AppError.jsx'
 
 if (SENTRY_DSN) {
   Sentry.init({
@@ -63,17 +63,19 @@ if (SENTRY_DSN) {
 }
 
 // lazy loaded routes
-const Home = lazy(() => import('./components/Home.jsx'))
-const Register = lazy(() => import('./components/Register.jsx'))
+const Home = lazy(() => import('./components/pages/Home.jsx'))
+const Register = lazy(() => import('./components/pages/auth/Register.jsx'))
 const RegisterWithAuthProvider = lazy(
-  () => import('./components/RegisterWithAuthProvider.jsx')
+  () => import('./components/pages/auth/RegisterWithAuthProvider.jsx')
 )
-const Corpus = lazy(() => import('./components/corpus/Corpus.jsx'))
-const Articles = lazy(() => import('./components/Articles.jsx'))
-const Workspaces = lazy(() => import('./components/workspace/Workspaces.jsx'))
-const Credentials = lazy(() => import('./components/Credentials.jsx'))
-const Annotate = lazy(() => import('./components/Annotate.jsx'))
-const Privacy = lazy(() => import('./components/Privacy.jsx'))
+const Corpus = lazy(() => import('./components/pages/Corpus.jsx'))
+const Articles = lazy(() => import('./components/pages/Articles.jsx'))
+const Workspaces = lazy(() => import('./components/pages/Workspaces.jsx'))
+const Credentials = lazy(
+  () => import('./components/organisms/user/Credentials.jsx')
+)
+const Annotate = lazy(() => import('./components/pages/Annotate.jsx'))
+const Privacy = lazy(() => import('./components/pages/Privacy.jsx'))
 const Story = lazy(() => import('./stories/Story.jsx'))
 
 const store = createStore()
