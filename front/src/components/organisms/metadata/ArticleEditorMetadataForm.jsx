@@ -2,7 +2,7 @@ import React, { useCallback, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { RefreshCw } from 'lucide-react'
 
-import Form from '../../Form'
+import Form from '../../molecules/Form.jsx'
 
 import { ArticleSchemas } from '../../../schemas/schemas.js'
 import { hasOjsData, mapOjsToStyloMetadata } from '../../../helpers/ojsMapper.js'
