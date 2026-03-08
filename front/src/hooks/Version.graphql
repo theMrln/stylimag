@@ -1,0 +1,13 @@
+#import './Credentials.graphql'
+
+fragment basicVersionFields on Version {
+  _id
+  createdAt
+  message
+  owner {
+    ...basicPublicUserFields
+  }
+  type
+  revision
+  version
+}
