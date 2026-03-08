@@ -13,3 +13,5 @@ infrastructure/env
 infrastructure/venv
 
 /.claude/settings.local.json
+.DS_Store
+.gitignore
