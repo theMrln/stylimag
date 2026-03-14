@@ -34,6 +34,12 @@ enum AuthTokenService {
   zotero
 }
 
+"OJS instance identifier (staging or production)"
+enum OjsInstance {
+  staging
+  production
+}
+
 type UserSearch {
   _id: ID
   displayName: String
@@ -470,8 +476,11 @@ type Query {
   "Get a corpus [with an access key]"
   sharedCorpus(corpusId: ID!, accessKey: JWT): Corpus
 
-  "Get a list of issues from OJS"
-  ojsIssues: [OjsIssue]
+  "Get a list of issues from an OJS instance (staging or production)"
+  ojsIssues(instance: OjsInstance!): [OjsIssue]
+
+  "List OJS instances that are configured (staging, production)"
+  ojsInstances: [OjsInstance!]!
 }
 
 type Mutation {
@@ -610,8 +619,8 @@ type Mutation {
   """
   workspace(workspaceId: ID!): Workspace
 
-  "Import an issue from OJS as a new corpus"
-  importCorpusFromOJS(issueId: Int!, workspaceId: ID): Corpus
+  "Import an issue from an OJS instance (staging or production) as a new corpus"
+  importCorpusFromOJS(issueId: Int!, workspaceId: ID, instance: OjsInstance!): Corpus
 
   """
   Retrieve an article by ID to perform mutations on it.

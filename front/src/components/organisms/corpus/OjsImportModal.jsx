@@ -2,15 +2,20 @@ import React, { useCallback, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'react-toastify'
 
-import { useOjsIssues, useOjsImport } from '../../../hooks/ojs.js'
+import { useOjsImport, useOjsIssues } from '../../../hooks/ojs.js'
 
-import Modal from '../../molecules/Modal.jsx'
 import Select from '../../atoms/Select.jsx'
+import Alert from '../../molecules/Alert.jsx'
 import FormActions from '../../molecules/FormActions.jsx'
 import Loading from '../../molecules/Loading.jsx'
-import Alert from '../../molecules/Alert.jsx'
+import Modal from '../../molecules/Modal.jsx'
 
 import styles from './ojsImportModal.module.scss'
+
+const OJS_INSTANCE_LABELS = {
+  staging: 'ojs.import.instance.staging',
+  production: 'ojs.import.instance.production',
+}
 
 /**
  * Get the display title for an OJS issue
@@ -52,29 +57,35 @@ function getIssueDisplayTitle(issue) {
 /**
  * @param props
  * @param {object} props.bindings - Modal bindings from useModal
+ * @param {'staging'|'production'} props.instance - OJS instance to import from
  * @param {function} props.onClose - Called when modal should close
  * @param {function} props.onImportSuccess - Called after successful import
  */
 export default function OjsImportModal({
   bindings,
+  instance,
   onClose,
   onImportSuccess = () => {},
 }) {
   const { t } = useTranslation()
-  const { issues, error: fetchError, isLoading } = useOjsIssues()
+  const {
+    issues,
+    error: fetchError,
+    isLoading,
+  } = useOjsIssues(instance ?? null)
   const { importCorpus } = useOjsImport()
   const [selectedIssueId, setSelectedIssueId] = useState('')
   const [isImporting, setIsImporting] = useState(false)
 
   const handleImport = useCallback(async () => {
-    if (!selectedIssueId) {
+    if (!selectedIssueId || !instance) {
       toast(t('ojs.import.selectIssueError'), { type: 'warning' })
       return
     }
 
     setIsImporting(true)
     try {
-      const corpus = await importCorpus(selectedIssueId)
+      const corpus = await importCorpus(selectedIssueId, instance)
       toast(
         t('ojs.import.success', {
           corpusName: corpus.name,
@@ -93,15 +104,25 @@ export default function OjsImportModal({
     } finally {
       setIsImporting(false)
     }
-  }, [selectedIssueId, importCorpus, onClose, onImportSuccess, t])
+  }, [selectedIssueId, instance, importCorpus, onClose, onImportSuccess, t])
 
   const handleCancel = useCallback(() => {
     setSelectedIssueId('')
     onClose()
   }, [onClose])
 
+  const instanceLabel = instance ? t(OJS_INSTANCE_LABELS[instance]) : ''
+
   return (
-    <Modal {...bindings} title={t('ojs.import.modalTitle')} cancel={handleCancel}>
+    <Modal
+      {...bindings}
+      title={
+        instanceLabel
+          ? t('ojs.import.modalTitleWithInstance', { instance: instanceLabel })
+          : t('ojs.import.modalTitle')
+      }
+      cancel={handleCancel}
+    >
       <div className={styles.content}>
         <p className={styles.description}>{t('ojs.import.description')}</p>
 
@@ -132,6 +153,8 @@ export default function OjsImportModal({
                 value={selectedIssueId}
                 onChange={(e) => setSelectedIssueId(e.target.value)}
                 disabled={isImporting}
+                size={Math.min(Math.max(issues.length, 8), 15)}
+                className={styles.issueSelect}
               >
                 <option value="">{t('ojs.import.selectPlaceholder')}</option>
                 {issues.map((issue) => (
@@ -148,7 +171,8 @@ export default function OjsImportModal({
                 text: isImporting
                   ? 'ojs.import.importing'
                   : 'ojs.import.importButton',
-                disabled: !selectedIssueId || isImporting || issues.length === 0,
+                disabled:
+                  !selectedIssueId || isImporting || issues.length === 0,
               }}
               onSubmit={handleImport}
             />

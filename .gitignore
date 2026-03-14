@@ -5,24 +5,14 @@ sails/.tmp
 /stylo.env
 /.env
 /.env.local
+/config/ojs.json
 /.idea/
 /.run/
 
 coverage/
 infrastructure/env
 infrastructure/venv
-<<<<<<< Updated upstream
 .DS_Store
-=======
-
-/.claude/settings.local.json
 infrastructure/.DS_Store
+/.claude/settings.local.json
 deployment_plan.md
-.gitignore
-.gitignore
-.gitignore
-.gitignore
-.gitignore
-.DS_Store
-.gitignore
->>>>>>> Stashed changes

@@ -1,7 +1,11 @@
 #import './Corpus.graphql'
 
-query getOjsIssues {
-  ojsIssues {
+query getOjsInstances {
+  ojsInstances
+}
+
+query getOjsIssues($instance: OjsInstance!) {
+  ojsIssues(instance: $instance) {
     id
     title
     description
@@ -12,8 +16,16 @@ query getOjsIssues {
   }
 }
 
-mutation importCorpusFromOJS($issueId: Int!, $workspaceId: ID) {
-  importCorpusFromOJS(issueId: $issueId, workspaceId: $workspaceId) {
+mutation importCorpusFromOJS(
+  $issueId: Int!
+  $workspaceId: ID
+  $instance: OjsInstance!
+) {
+  importCorpusFromOJS(
+    issueId: $issueId
+    workspaceId: $workspaceId
+    instance: $instance
+  ) {
     ...basicCorpusFields
   }
 }

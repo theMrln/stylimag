@@ -1,10 +1,11 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { Helmet } from 'react-helmet-async'
 import { useTranslation } from 'react-i18next'
 import { useParams } from 'react-router'
 
 import { useCorpus } from '../../hooks/corpus.js'
 import { useModal } from '../../hooks/modal.js'
+import { useOjsInstances } from '../../hooks/ojs.js'
 
 import Modal from '../Modal.jsx'
 import Button from '../atoms/Button.jsx'
@@ -21,8 +22,20 @@ export default function Corpus() {
   const { t } = useTranslation()
   const { workspaceId } = useParams()
   const { corpus, workspace, isLoading, error } = useCorpus({ workspaceId })
+  const { instances: ojsInstances } = useOjsInstances()
   const createCorpusModal = useModal()
   const ojsImportModal = useModal()
+  const [ojsImportInstance, setOjsImportInstance] = useState(null)
+
+  const openOjsImport = (instance) => {
+    setOjsImportInstance(instance)
+    ojsImportModal.show()
+  }
+
+  const closeOjsImport = () => {
+    setOjsImportInstance(null)
+    ojsImportModal.close()
+  }
 
   return (
     <section className={styles.section}>
@@ -47,9 +60,16 @@ export default function Corpus() {
           {t('corpus.createAction.buttonText')}
         </Button>
 
-        <Button secondary onClick={() => ojsImportModal.show()}>
-          {t('ojs.import.buttonText')}
-        </Button>
+        {ojsInstances.includes('staging') && (
+          <Button secondary onClick={() => openOjsImport('staging')}>
+            {t('ojs.import.buttonStaging')}
+          </Button>
+        )}
+        {ojsInstances.includes('production') && (
+          <Button secondary onClick={() => openOjsImport('production')}>
+            {t('ojs.import.buttonProduction')}
+          </Button>
+        )}
       </div>
 
       <Modal
@@ -64,7 +84,8 @@ export default function Corpus() {
 
       <OjsImportModal
         bindings={ojsImportModal.bindings}
-        onClose={() => ojsImportModal.close()}
+        instance={ojsImportInstance}
+        onClose={closeOjsImport}
       />
 
       {error && <Alert className={styles.message} message={error.message} />}

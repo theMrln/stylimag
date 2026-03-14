@@ -1,34 +1,26 @@
 const { describe, test, mock, beforeEach, afterEach } = require('node:test')
 const assert = require('node:assert')
 
+const testConfig = {
+  api_endpoint: 'https://ojs.example.com/api/v1',
+  api_token: 'test-token-123',
+}
+
 describe('ojs helper', () => {
   let ojsHelper
-  let originalEnv
-  let mockFetch
 
   beforeEach(() => {
-    // Save original env
-    originalEnv = { ...process.env }
+    // Mock ojsConfig.getOjsInstanceConfig to return test config for any instance
+    const ojsConfig = require('./ojsConfig.js')
+    mock.method(ojsConfig, 'getOjsInstanceConfig', () => testConfig)
 
-    // Set test env vars BEFORE requiring the module
-    process.env.OJS_API_ENDPOINT = 'https://ojs.example.com/api/v1'
-    process.env.OJS_API_TOKEN = 'test-token-123'
-
-    // Clear module cache to ensure fresh load with new env vars
     delete require.cache[require.resolve('./ojs.js')]
-
-    // Mock global fetch
-    mockFetch = mock.fn()
+    const mockFetch = mock.fn()
     global.fetch = mockFetch
-
-    // Load the module fresh
     ojsHelper = require('./ojs.js')
   })
 
   afterEach(() => {
-    // Restore original env
-    process.env = originalEnv
-    // Clean up mock
     mock.reset()
   })
 
@@ -38,45 +30,62 @@ describe('ojs helper', () => {
         { id: 1, title: { en_US: 'Issue 1' } },
         { id: 2, title: { en_US: 'Issue 2' } },
       ]
-      mockFetch.mock.mockImplementation(async () => ({
+      global.fetch.mock.mockImplementation(async () => ({
         ok: true,
         json: async () => ({ items: mockIssues }),
       }))
 
-      const result = await ojsHelper.getOjsIssues()
+      const result = await ojsHelper.getOjsIssues('staging')
 
       assert.deepEqual(result, mockIssues)
-      assert.equal(mockFetch.mock.callCount(), 1)
-
-      const calledUrl = mockFetch.mock.calls[0].arguments[0]
+      assert.equal(global.fetch.mock.callCount(), 1)
+      const calledUrl = global.fetch.mock.calls[0].arguments[0]
       assert.match(
         calledUrl,
-        /https:\/\/ojs\.example\.com\/api\/v1\/issues\?orderBy=id&orderDirection=DESC&apiToken=test-token-123/
+        /\/issues\?orderBy=datePublished&orderDirection=DESC&count=500&apiToken=test-token-123/
       )
     })
 
     test('returns empty array when no items', async () => {
-      mockFetch.mock.mockImplementation(async () => ({
+      global.fetch.mock.mockImplementation(async () => ({
         ok: true,
         json: async () => ({}),
       }))
 
-      const result = await ojsHelper.getOjsIssues()
+      const result = await ojsHelper.getOjsIssues('production')
 
       assert.deepEqual(result, [])
     })
 
+    test('returns issues sorted latest first', async () => {
+      global.fetch.mock.mockImplementation(async () => ({
+        ok: true,
+        json: async () => ({
+          items: [
+            { id: 1, datePublished: '2020-01-01', year: 2020 },
+            { id: 3, datePublished: '2023-06-15', year: 2023 },
+            { id: 2, datePublished: '2021-05-01', year: 2021 },
+          ],
+        }),
+      }))
+
+      const result = await ojsHelper.getOjsIssues('staging')
+
+      assert.equal(result[0].id, 3)
+      assert.equal(result[1].id, 2)
+      assert.equal(result[2].id, 1)
+    })
+
     test('throws on API error', async () => {
-      mockFetch.mock.mockImplementation(async () => ({
+      global.fetch.mock.mockImplementation(async () => ({
         ok: false,
         status: 401,
         statusText: 'Unauthorized',
       }))
 
-      await assert.rejects(
-        async () => ojsHelper.getOjsIssues(),
-        { message: 'OJS API Error: 401 Unauthorized' }
-      )
+      await assert.rejects(async () => ojsHelper.getOjsIssues('staging'), {
+        message: /OJS API Error \[staging\]: 401 Unauthorized/,
+      })
     })
   })
 
@@ -87,17 +96,16 @@ describe('ojs helper', () => {
         title: { en_US: 'Test Issue' },
         description: { en_US: 'Description' },
       }
-      mockFetch.mock.mockImplementation(async () => ({
+      global.fetch.mock.mockImplementation(async () => ({
         ok: true,
         json: async () => mockMetadata,
       }))
 
-      const result = await ojsHelper.getOjsIssueMetadata(123)
+      const result = await ojsHelper.getOjsIssueMetadata('staging', 123)
 
       assert.deepEqual(result, mockMetadata)
-      assert.equal(mockFetch.mock.callCount(), 1)
-
-      const calledUrl = mockFetch.mock.calls[0].arguments[0]
+      assert.equal(global.fetch.mock.callCount(), 1)
+      const calledUrl = global.fetch.mock.calls[0].arguments[0]
       assert.match(
         calledUrl,
         /https:\/\/ojs\.example\.com\/api\/v1\/issues\/123\?apiToken=test-token-123/
@@ -105,15 +113,15 @@ describe('ojs helper', () => {
     })
 
     test('throws on 404', async () => {
-      mockFetch.mock.mockImplementation(async () => ({
+      global.fetch.mock.mockImplementation(async () => ({
         ok: false,
         status: 404,
         statusText: 'Not Found',
       }))
 
       await assert.rejects(
-        async () => ojsHelper.getOjsIssueMetadata(999),
-        { message: 'OJS API Error: 404 Not Found' }
+        async () => ojsHelper.getOjsIssueMetadata('staging', 999),
+        { message: /OJS API Error \[staging\]: 404 Not Found/ }
       )
     })
   })
@@ -124,7 +132,7 @@ describe('ojs helper', () => {
         { id: 1, title: { en_US: 'Article 1' } },
         { id: 2, title: { en_US: 'Article 2' } },
       ]
-      mockFetch.mock.mockImplementation(async () => ({
+      global.fetch.mock.mockImplementation(async () => ({
         ok: true,
         json: async () => ({
           id: 123,
@@ -133,13 +141,13 @@ describe('ojs helper', () => {
         }),
       }))
 
-      const result = await ojsHelper.getOjsIssueSubmissions(123)
+      const result = await ojsHelper.getOjsIssueSubmissions('staging', 123)
 
       assert.deepEqual(result, mockArticles)
     })
 
     test('returns empty array when no articles', async () => {
-      mockFetch.mock.mockImplementation(async () => ({
+      global.fetch.mock.mockImplementation(async () => ({
         ok: true,
         json: async () => ({
           id: 123,
@@ -147,7 +155,7 @@ describe('ojs helper', () => {
         }),
       }))
 
-      const result = await ojsHelper.getOjsIssueSubmissions(123)
+      const result = await ojsHelper.getOjsIssueSubmissions('production', 123)
 
       assert.deepEqual(result, [])
     })
@@ -161,17 +169,16 @@ describe('ojs helper', () => {
         title: { en_US: 'Publication Title' },
         abstract: { en_US: 'Abstract text' },
       }
-      mockFetch.mock.mockImplementation(async () => ({
+      global.fetch.mock.mockImplementation(async () => ({
         ok: true,
         json: async () => mockPublication,
       }))
 
-      const result = await ojsHelper.getOjsPublication(100, 456)
+      const result = await ojsHelper.getOjsPublication('staging', 100, 456)
 
       assert.deepEqual(result, mockPublication)
-      assert.equal(mockFetch.mock.callCount(), 1)
-
-      const calledUrl = mockFetch.mock.calls[0].arguments[0]
+      assert.equal(global.fetch.mock.callCount(), 1)
+      const calledUrl = global.fetch.mock.calls[0].arguments[0]
       assert.match(
         calledUrl,
         /https:\/\/ojs\.example\.com\/api\/v1\/submissions\/100\/publications\/456\?apiToken=test-token-123/
@@ -180,39 +187,15 @@ describe('ojs helper', () => {
   })
 
   describe('missing configuration', () => {
-    test('throws when OJS_API_ENDPOINT is missing', async () => {
-      // Clear and reload without endpoint
-      delete process.env.OJS_API_ENDPOINT
-      process.env.OJS_API_TOKEN = 'test-token'
+    test('throws when instance config is missing', async () => {
+      const ojsConfig = require('./ojsConfig.js')
+      mock.method(ojsConfig, 'getOjsInstanceConfig', () => null)
       delete require.cache[require.resolve('./ojs.js')]
-      const ojsHelperNoEndpoint = require('./ojs.js')
-
-      mockFetch.mock.mockImplementation(async () => ({
-        ok: true,
-        json: async () => ({ items: [] }),
-      }))
+      const ojsHelperNoConfig = require('./ojs.js')
 
       await assert.rejects(
-        async () => ojsHelperNoEndpoint.getOjsIssues(),
-        { message: 'OJS configuration missing (OJS_API_ENDPOINT or OJS_API_TOKEN)' }
-      )
-    })
-
-    test('throws when OJS_API_TOKEN is missing', async () => {
-      // Clear and reload without token
-      process.env.OJS_API_ENDPOINT = 'https://ojs.example.com/api/v1'
-      delete process.env.OJS_API_TOKEN
-      delete require.cache[require.resolve('./ojs.js')]
-      const ojsHelperNoToken = require('./ojs.js')
-
-      mockFetch.mock.mockImplementation(async () => ({
-        ok: true,
-        json: async () => ({ items: [] }),
-      }))
-
-      await assert.rejects(
-        async () => ojsHelperNoToken.getOjsIssues(),
-        { message: 'OJS configuration missing (OJS_API_ENDPOINT or OJS_API_TOKEN)' }
+        async () => ojsHelperNoConfig.getOjsIssues('staging'),
+        { message: /OJS configuration missing for instance "staging"/ }
       )
     })
   })

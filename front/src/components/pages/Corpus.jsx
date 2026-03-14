@@ -1,9 +1,11 @@
+import { useState } from 'react'
 import { Helmet } from 'react-helmet-async'
 import { useTranslation } from 'react-i18next'
 import { useParams } from 'react-router'
 
 import { useCorpus } from '../../hooks/corpus.js'
 import { useModal } from '../../hooks/modal.js'
+import { useOjsInstances } from '../../hooks/ojs.js'
 import { useWorkspaceName } from '../../hooks/workspace.js'
 import { Button, PageTitle } from '../atoms/index.js'
 import { Alert, Loading } from '../molecules/index.js'
@@ -21,9 +23,22 @@ export default function Corpus() {
   const { t: tCommon } = useTranslation()
   const { workspaceId } = useParams()
   const { corpus, workspace, isLoading, error } = useCorpus({ workspaceId })
+  const { instances: ojsInstances } = useOjsInstances()
   const createCorpusModal = useModal()
   const ojsImportModal = useModal()
+  const [ojsImportInstance, setOjsImportInstance] = useState(null)
   const workspaceName = useWorkspaceName({ workspace })
+
+  const openOjsImport = (instance) => {
+    setOjsImportInstance(instance)
+    ojsImportModal.show()
+  }
+
+  const closeOjsImport = () => {
+    setOjsImportInstance(null)
+    ojsImportModal.close()
+  }
+
   return (
     <section className={styles.section}>
       <Helmet>
@@ -35,9 +50,16 @@ export default function Corpus() {
         <Button primary onClick={() => createCorpusModal.show()}>
           {t('actions.create.label')}
         </Button>
-        <Button secondary onClick={() => ojsImportModal.show()}>
-          {tCommon('ojs.import.buttonText')}
-        </Button>
+        {ojsInstances.includes('staging') && (
+          <Button secondary onClick={() => openOjsImport('staging')}>
+            {tCommon('ojs.import.buttonStaging')}
+          </Button>
+        )}
+        {ojsInstances.includes('production') && (
+          <Button secondary onClick={() => openOjsImport('production')}>
+            {tCommon('ojs.import.buttonProduction')}
+          </Button>
+        )}
       </header>
       <WorkspaceLabel color={workspace.color} name={workspace.name} />
       <p className={styles.introduction}>{t('description')}</p>
@@ -51,7 +73,8 @@ export default function Corpus() {
 
       <OjsImportModal
         bindings={ojsImportModal.bindings}
-        onClose={() => ojsImportModal.close()}
+        instance={ojsImportInstance}
+        onClose={closeOjsImport}
       />
 
       {error && <Alert className={styles.message} message={error.message} />}

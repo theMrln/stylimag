@@ -1,71 +1,98 @@
-
 const { logger } = require('../logger')
+const {
+  getOjsInstanceConfig,
+  getAvailableOjsInstances,
+} = require('./ojsConfig')
 
-const API_ENDPOINT = process.env.OJS_API_ENDPOINT
-const API_TOKEN = process.env.OJS_API_TOKEN
-
-async function fetchOjs(path, options = {}) {
-  if (!API_ENDPOINT || !API_TOKEN) {
-    throw new Error('OJS configuration missing (OJS_API_ENDPOINT or OJS_API_TOKEN)')
+/**
+ * Fetch from an OJS API instance (OJS 3.x / 3.5 compatible).
+ * Endpoint is used as-is to support index.php-style URLs (e.g. .../index.php/journal/api/v1).
+ * @param {'staging'|'production'} instance
+ * @param {string} path - API path e.g. /issues or /issues/123
+ * @param {RequestInit} [options]
+ */
+async function fetchOjs(instance, path, options = {}) {
+  const config = getOjsInstanceConfig(instance)
+  if (!config) {
+    throw new Error(
+      `OJS configuration missing for instance "${instance}". Check config/ojs.json.`
+    )
   }
 
-  const url = `${API_ENDPOINT}${path}`
+  const url = `${config.api_endpoint}${path.startsWith('/') ? path : `/${path}`}`
   const delimiter = url.includes('?') ? '&' : '?'
-  const urlWithAuth = `${url}${delimiter}apiToken=${API_TOKEN}`
+  const urlWithAuth = `${url}${delimiter}apiToken=${config.api_token}`
 
-  logger.info(`Fetching OJS data from: ${path}`)
+  logger.info(`Fetching OJS data [${instance}]: ${path}`)
 
   const response = await fetch(urlWithAuth, options)
 
   if (!response.ok) {
-    throw new Error(`OJS API Error: ${response.status} ${response.statusText}`)
+    throw new Error(
+      `OJS API Error [${instance}]: ${response.status} ${response.statusText}`
+    )
   }
 
   return response.json()
 }
 
 /**
- * Get all available issues from OJS
+ * Get all available issues from an OJS instance, newest first.
+ * OJS 3.x / 3.5: GET /issues?orderBy=...&orderDirection=DESC
+ * Uses count to request more than default page size so the dropdown shows all issues.
+ * @param {'staging'|'production'} instance
  */
-async function getOjsIssues() {
-  // Based on imaginations-issue-template: issues?orderBy=id&isPublished=1&orderDirection=DESC
-  // We might want to make filters optional later, but for now reproducing the template's logic
-  // The template fetches ALL issues (published or not depending on user input), here we default to all.
-  const data = await fetchOjs('/issues?orderBy=id&orderDirection=DESC')
-  return data.items || []
+async function getOjsIssues(instance) {
+  const data = await fetchOjs(
+    instance,
+    '/issues?orderBy=datePublished&orderDirection=DESC&count=500'
+  )
+  const items = data.items || []
+  // Ensure latest first: sort by datePublished (or year, id) descending
+  items.sort((a, b) => {
+    const dateA = a.datePublished || (a.year != null ? `${a.year}` : '') || '0'
+    const dateB = b.datePublished || (b.year != null ? `${b.year}` : '') || '0'
+    if (dateB !== dateA) return dateB.localeCompare(dateA, undefined, { numeric: true })
+    return (b.id ?? 0) - (a.id ?? 0)
+  })
+  return items
 }
 
 /**
- * Get metadata for a specific issue
+ * Get metadata for a specific issue.
+ * @param {'staging'|'production'} instance
+ * @param {number} issueId
  */
-async function getOjsIssueMetadata(issueId) {
-  return fetchOjs(`/issues/${issueId}`)
+async function getOjsIssueMetadata(instance, issueId) {
+  return fetchOjs(instance, `/issues/${issueId}`)
 }
 
 /**
- * Get submissions for a specific issue
- * The issue metadata contains "articles" which are actually submissions/publications
+ * Get submissions for a specific issue (OJS 3.x: issue response may include articles).
+ * @param {'staging'|'production'} instance
+ * @param {number} issueId
  */
-async function getOjsIssueSubmissions(issueId) {
-    const issueData = await getOjsIssueMetadata(issueId)
-    // In OJS 3.x API, the issue endpoint usually returns detailed data including articles/submissions if usually configured
-    // Let's verify what the template does.
-    // The template script `a_get_issue_metadata.sh` calls `/issues/$issue_id` and saves it.
-    // It assumes the response contains the articles.
-    return issueData.articles || []
+async function getOjsIssueSubmissions(instance, issueId) {
+  const issueData = await getOjsIssueMetadata(instance, issueId)
+  return issueData.articles || []
 }
 
 /**
- * Get full publication metadata
- * Corresponds to /submissions/$submission_id/publications/$publication_id
+ * Get full publication metadata.
+ * OJS 3.x: GET /submissions/:submissionId/publications/:publicationId
+ * @param {'staging'|'production'} instance
  */
-async function getOjsPublication(submissionId, publicationId) {
-    return fetchOjs(`/submissions/${submissionId}/publications/${publicationId}`)
+async function getOjsPublication(instance, submissionId, publicationId) {
+  return fetchOjs(
+    instance,
+    `/submissions/${submissionId}/publications/${publicationId}`
+  )
 }
 
 module.exports = {
   getOjsIssues,
   getOjsIssueMetadata,
   getOjsPublication,
-    getOjsIssueSubmissions
+  getOjsIssueSubmissions,
+  getAvailableOjsInstances,
 }

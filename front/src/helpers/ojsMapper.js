@@ -119,14 +119,14 @@ function mapAuthors(ojsAuthors) {
  */
 export function mapOjsToStyloMetadata(ojsSubmission, existingMetadata = {}) {
   if (!ojsSubmission) return existingMetadata
-  
+
   const publication = ojsSubmission?.publications?.[0]
-  
+
   const metadata = {
     ...existingMetadata,
-    // Required schema fields
-    type: 'article',
-    '@version': '1.0',
+    // Required schema fields: preserve from existingMetadata when provided (e.g. re-import)
+    type: existingMetadata?.type ?? 'article',
+    '@version': existingMetadata?.['@version'] ?? '1.0',
   }
   
   // Title

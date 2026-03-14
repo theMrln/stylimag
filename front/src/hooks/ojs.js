@@ -1,69 +1,84 @@
 import { useSelector } from 'react-redux'
 
 import { executeQuery } from '../helpers/graphQL.js'
-import useGraphQL, { useMutateData } from './graphql.js'
+import useGraphQL, {
+  useConditionalFetchData,
+  useMutateData,
+} from './graphql.js'
 import { useActiveWorkspaceId } from './workspace.js'
 
+import { getCorpus as getCorpusQuery } from './Corpus.graphql'
 import {
+  getOjsInstances as getOjsInstancesQuery,
   getOjsIssues as getOjsIssuesQuery,
   importCorpusFromOJS as importCorpusFromOJSMutation,
 } from './Ojs.graphql'
 
-import { getCorpus as getCorpusQuery } from './Corpus.graphql'
-
 /**
- * Hook to fetch OJS issues
- * @returns {{issues: Array, error: Error|null, isLoading: boolean}}
+ * Hook to fetch configured OJS instances (staging, production).
+ * @returns {{instances: string[], error: Error|null, isLoading: boolean}}
  */
-export function useOjsIssues() {
+export function useOjsInstances() {
   const { data, error, isLoading } = useGraphQL(
-    {
-      query: getOjsIssuesQuery,
-    },
-    {
-      revalidateOnFocus: false,
-      revalidateOnReconnect: false,
-    }
+    { query: getOjsInstancesQuery },
+    { revalidateOnFocus: false, revalidateOnReconnect: false }
   )
-
   return {
-    issues: data?.ojsIssues || [],
+    instances: data?.ojsInstances ?? [],
     error,
     isLoading,
   }
 }
 
 /**
- * Hook for OJS import actions
- * @returns {{importCorpus: function(number): Promise<object>}}
+ * Hook to fetch OJS issues for a given instance. Fetches only when instance is set.
+ * @param {'staging'|'production'|null} instance - Ojs instance; pass null to skip fetch
+ * @returns {{issues: Array, error: Error|null, isLoading: boolean}}
+ */
+export function useOjsIssues(instance) {
+  const { data, error, isLoading } = useConditionalFetchData(
+    () =>
+      instance ? { query: getOjsIssuesQuery, variables: { instance } } : null,
+    {
+      revalidateOnFocus: false,
+      revalidateOnReconnect: false,
+    }
+  )
+  return {
+    issues: data?.ojsIssues ?? [],
+    error,
+    isLoading,
+  }
+}
+
+/**
+ * Hook for OJS import actions.
+ * @returns {{importCorpus: function(number, 'staging'|'production'): Promise<object>}}
  */
 export function useOjsImport() {
   const workspaceId = useActiveWorkspaceId() ?? null
   const sessionToken = useSelector((state) => state.sessionToken)
 
-  // Mutate corpus list after import
   const { mutate } = useMutateData({
     query: getCorpusQuery,
     variables: {
       isPersonalWorkspace: !workspaceId,
-      filter: {
-        workspaceId,
-      },
+      filter: { workspaceId },
       workspaceId,
     },
   })
 
-  const importCorpus = async (issueId) => {
+  const importCorpus = async (issueId, instance) => {
     const response = await executeQuery({
       sessionToken,
       query: importCorpusFromOJSMutation,
       variables: {
         issueId: parseInt(issueId, 10),
         workspaceId,
+        instance,
       },
     })
 
-    // Update the corpus list with the new corpus
     await mutate(async (data) => {
       return {
         ...data,
@@ -74,7 +89,5 @@ export function useOjsImport() {
     return response.importCorpusFromOJS
   }
 
-  return {
-    importCorpus,
-  }
+  return { importCorpus }
 }

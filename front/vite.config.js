@@ -6,8 +6,10 @@ import pkg from './package.json' with { type: 'json' }
 import graphql from '@rollup/plugin-graphql'
 import { sentryVitePlugin } from '@sentry/vite-plugin'
 import react from '@vitejs/plugin-react'
-import { join } from 'node:path'
+import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
+
+const frontDir = dirname(fileURLToPath(import.meta.url))
 import { configDefaults, coverageConfigDefaults } from 'vitest/config'
 
 // https://vitejs.dev/config/
@@ -26,6 +28,16 @@ export default defineConfig(async ({ mode }) => {
   return {
     base: env.DEPLOY_PRIME_URL ?? '/',
     envPrefix,
+    resolve: {
+      alias: [
+        // monaco-editor's vscode-css-languageservice imports @vscode/l10n via a relative
+        // path that resolves outside the package; point it at the real dependency.
+        {
+          find: /^\.\.\/\.\.\/\.\.\/\.\.\/@vscode\/l10n/,
+          replacement: resolve(frontDir, 'node_modules/@vscode/l10n'),
+        },
+      ],
+    },
     build: {
       outDir: 'build',
       sourcemap: true,
