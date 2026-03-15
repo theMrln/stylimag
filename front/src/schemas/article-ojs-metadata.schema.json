@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://stylo.huma-num.fr/schemas/article-ojs-metadata.schema.json",
+  "title": "Article metadata (OJS)",
+  "type": "object",
+  "definitions": {
+    "localizedString": {
+      "type": "object",
+      "description": "Locale-keyed strings (e.g. en_US, fr_CA)",
+      "additionalProperties": { "type": "string" }
+    },
+    "ojsAuthor": {
+      "type": "object",
+      "properties": {
+        "givenName": { "$ref": "#/definitions/localizedString" },
+        "familyName": { "$ref": "#/definitions/localizedString" }
+      }
+    }
+  },
+  "properties": {
+    "type": { "type": "string", "const": "article" },
+    "@version": { "type": "string", "const": "1.0" },
+    "locale": {
+      "type": "string",
+      "enum": ["en", "fr", "it", "es", "pt", "de", "uk", "ar"],
+      "default": "en"
+    },
+    "title": {
+      "$ref": "#/definitions/localizedString",
+      "description": "Localized title (en_US, fr_CA, …)"
+    },
+    "authors": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/ojsAuthor" }
+    },
+    "abstract": {
+      "$ref": "#/definitions/localizedString",
+      "description": "Localized abstract (HTML allowed)"
+    },
+    "issue": {
+      "type": "string",
+      "description": "Issue identifier (e.g. 15-1, 2024)"
+    },
+    "start_page": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "First page number"
+    },
+    "short_title": {
+      "type": "string",
+      "description": "Short title for citations"
+    },
+    "short_author": {
+      "type": "string",
+      "description": "Short author string for citations (e.g. hambuch)"
+    }
+  },
+  "required": []
+}

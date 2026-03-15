@@ -78,6 +78,16 @@ async function getOjsIssueSubmissions(instance, issueId) {
 }
 
 /**
+ * Get a single submission (includes currentPublicationId and publications array).
+ * OJS 3.x: GET /submissions/:submissionId
+ * @param {'staging'|'production'} instance
+ * @param {number|string} submissionId
+ */
+async function getOjsSubmission(instance, submissionId) {
+  return fetchOjs(instance, `/submissions/${submissionId}`)
+}
+
+/**
  * Get full publication metadata.
  * OJS 3.x: GET /submissions/:submissionId/publications/:publicationId
  * @param {'staging'|'production'} instance
@@ -89,10 +99,87 @@ async function getOjsPublication(instance, submissionId, publicationId) {
   )
 }
 
+/**
+ * Get section metadata by id (for section title when publication only has sectionId).
+ * OJS 3.x may expose GET /sections/:sectionId. Returns null on 404 or error.
+ * @param {'staging'|'production'} instance
+ * @param {number|string} sectionId
+ * @returns {Promise<{ id: number, title?: object|string }|null>}
+ */
+async function getOjsSection(instance, sectionId) {
+  if (sectionId == null) return null
+  try {
+    return await fetchOjs(instance, `/sections/${sectionId}`)
+  } catch (err) {
+    logger.debug(`Could not fetch OJS section ${sectionId}: ${err.message}`)
+    return null
+  }
+}
+
+/**
+ * Enrich a submission from an issue's articles list with full publication data.
+ * Issue articles often only have stub data; authors and full metadata live in
+ * submissions.publications[0]. This fetches the full publication and returns
+ * a submission-shaped object with publications: [fullPublication].
+ *
+ * @param {'staging'|'production'} instance
+ * @param {object} submissionOrArticle - Item from issue.articles (has id; may have currentPublicationId or publications[0].id)
+ * @returns {Promise<object>} Same shape as submission with publications: [fullPublication] for mapping
+ */
+async function getSubmissionWithFullPublication(instance, submissionOrArticle) {
+  const submissionId = submissionOrArticle?.id
+  if (submissionId == null) {
+    return submissionOrArticle
+  }
+
+  let publicationId =
+    submissionOrArticle.currentPublicationId ??
+    submissionOrArticle.publications?.[0]?.id
+
+  if (publicationId == null) {
+    try {
+      const fullSubmission = await getOjsSubmission(instance, submissionId)
+      publicationId =
+        fullSubmission.currentPublicationId ??
+        fullSubmission.publications?.[0]?.id
+    } catch (err) {
+      logger.warn(
+        `Could not fetch submission ${submissionId} for publication id: ${err.message}`
+      )
+      return submissionOrArticle
+    }
+  }
+
+  if (publicationId == null) {
+    return submissionOrArticle
+  }
+
+  try {
+    const fullPublication = await getOjsPublication(
+      instance,
+      submissionId,
+      publicationId
+    )
+    return {
+      ...submissionOrArticle,
+      id: submissionId,
+      publications: [fullPublication],
+    }
+  } catch (err) {
+    logger.warn(
+      `Could not fetch publication ${publicationId} for submission ${submissionId}: ${err.message}`
+    )
+    return submissionOrArticle
+  }
+}
+
 module.exports = {
   getOjsIssues,
   getOjsIssueMetadata,
+  getOjsSubmission,
   getOjsPublication,
+  getOjsSection,
   getOjsIssueSubmissions,
+  getSubmissionWithFullPublication,
   getAvailableOjsInstances,
 }

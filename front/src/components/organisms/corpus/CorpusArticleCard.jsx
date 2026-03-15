@@ -4,6 +4,36 @@ import { Link } from 'react-router'
 
 import styles from './corpusArticleCard.module.scss'
 
+/**
+ * Get first string from a localized object (en_US, fr_CA, etc.)
+ * @param {object|string} obj
+ * @returns {string}
+ */
+function firstLocaleValue(obj) {
+  if (obj == null) return ''
+  if (typeof obj === 'string') return obj.trim()
+  const v = obj.en_US ?? obj.en ?? obj.fr_CA ?? obj.fr ?? Object.values(obj).find((x) => typeof x === 'string')
+  return (v && String(v).trim()) ?? ''
+}
+
+/**
+ * Format metadata authors for display. Supports OJS shape (givenName/familyName as localized objects) and legacy (forename/surname).
+ * @param {Array<{ givenName?: object|string, familyName?: object|string, forename?: string, surname?: string }>} authors
+ * @returns {string}
+ */
+function formatAuthors(authors) {
+  if (!Array.isArray(authors) || authors.length === 0) return ''
+  return authors
+    .map((a) => {
+      const given = (firstLocaleValue(a.givenName) || a.forename?.trim()) ?? ''
+      const family = (firstLocaleValue(a.familyName) || a.surname?.trim()) ?? ''
+      if (family && given) return `${family}, ${given}`
+      return family || given
+    })
+    .filter(Boolean)
+    .join('; ')
+}
+
 export default function CorpusArticleCard({ id, article, index, moveCard }) {
   const ref = useRef(null)
   const [{ handlerId }, drop] = useDrop({
@@ -91,9 +121,18 @@ export default function CorpusArticleCard({ id, article, index, moveCard }) {
         <path d="M15 19m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0"></path>
       </svg>
 
-      <Link to={`/article/${article._id}`} className={styles.title}>
-        {article.title}
-      </Link>
+      <div className={styles.articleInfo}>
+        <Link to={`/article/${article._id}`} className={styles.title}>
+          {article.title}
+        </Link>
+        {(() => {
+          const authors = article.workingVersion?.metadata?.authors
+          const text = formatAuthors(authors)
+          return text ? (
+            <span className={styles.authors}>{text}</span>
+          ) : null
+        })()}
+      </div>
     </div>
   )
 }

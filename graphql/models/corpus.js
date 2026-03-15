@@ -7,6 +7,12 @@ const CorpusArticleSchema = new Schema({
     ref: 'Article',
   },
   order: Number,
+  /** Section id or key for grouping (e.g. from OJS sectionId). Optional. */
+  section: Schema.Types.Mixed,
+  /** Section display title (e.g. from OJS section title). Optional. */
+  sectionTitle: String,
+  /** Sequence within section (e.g. from OJS publication seq). Optional. */
+  seq: Number,
 })
 
 const corpusSchema = new Schema(

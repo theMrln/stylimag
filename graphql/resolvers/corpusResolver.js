@@ -4,6 +4,7 @@ const Workspace = require('../models/workspace')
 const { logger } = require('../logger')
 const { NotAuthorizedError } = require('../helpers/errors')
 const { diff } = require('../helpers/diff')
+const { getArticleByContext } = require('./articleResolver.js')
 
 async function getCorpusByContext(corpusId, context) {
   if (context.token?.admin) {
@@ -234,13 +235,25 @@ module.exports = {
               return {
                 _id: article._id,
                 order: article.order,
+                section: article.section,
+                sectionTitle: article.sectionTitle,
+                seq: article.seq,
                 article: articleLoaded,
               }
             })
             .filter((a) => a)
         )
       ).filter((a) => a)
-      articles.sort((a, b) => (a.order < b.order ? -1 : 1))
+      articles.sort((a, b) => {
+        const sectA = a.section ?? ''
+        const sectB = b.section ?? ''
+        if (sectA !== sectB) {
+          return String(sectA).localeCompare(String(sectB))
+        }
+        const seqA = a.seq ?? a.order ?? 0
+        const seqB = b.seq ?? b.order ?? 0
+        return seqA - seqB
+      })
       return articles
     },
 
@@ -272,9 +285,23 @@ module.exports = {
       return corpus.save()
     },
 
-    async delete(corpus) {
+    async delete(corpus, { deleteArticles }, context) {
+      if (deleteArticles && corpus.articles?.length > 0) {
+        for (const item of corpus.articles) {
+          const articleId = item.article?._id ?? item.article
+          if (!articleId) continue
+          try {
+            const article = await getArticleByContext(articleId, context)
+            if (article) await article.deleteOne()
+          } catch (err) {
+            logger.warn(
+              `Could not delete article ${articleId} when deleting corpus ${corpus._id}: ${err.message}`
+            )
+            throw err
+          }
+        }
+      }
       await corpus.deleteOne()
-
       return corpus
     },
 
@@ -304,6 +331,9 @@ module.exports = {
         return {
           article: corpusArticle.article,
           order,
+          section: corpusArticle.section,
+          sectionTitle: corpusArticle.sectionTitle,
+          seq: corpusArticle.seq,
         }
       })
       return corpus.save()

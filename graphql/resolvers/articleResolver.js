@@ -167,6 +167,7 @@ function eqSet(a, b) {
 }
 
 module.exports = {
+  getArticleByContext,
   Mutation: {
     /**
      * Update an article as the current user

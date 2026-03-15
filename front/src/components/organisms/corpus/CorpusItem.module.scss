@@ -49,6 +49,18 @@
   }
 }
 
+.deleteArticlesOption {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 1rem 0;
+  cursor: pointer;
+
+  input[type='checkbox'] {
+    flex-shrink: 0;
+  }
+}
+
 .primaryAction {
   background-color: $main-color;
   color: $main-background-color;

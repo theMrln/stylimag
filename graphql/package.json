@@ -13,6 +13,8 @@
     "generate-service-token": "node -p \"require('jsonwebtoken').sign({ admin: true, roles: ['read'], readonly: true }, process.env.JWT_SECRET_SESSION_COOKIE, { expiresIn: '1 year' })\"",
     "test": "c8 --reporter=lcov node --test **/*.test.js",
     "migrations": "DOTENV_CONFIG_PATH=${DOTENV_CONFIG_PATH:-../.env} node -r dotenv/config ./node_modules/.bin/db-migrate up",
+    "convert-metadata-to-ojs": "DOTENV_CONFIG_PATH=${DOTENV_CONFIG_PATH:-../.env} node -r dotenv/config scripts/convert-article-metadata-to-ojs.js",
+    "convert-metadata-to-ojs:dry": "DRY_RUN=1 npm run convert-metadata-to-ojs",
     "posttest": "eslint '**/*.js'",
     "prestart": "npm run migrations",
     "start": "node app.js",

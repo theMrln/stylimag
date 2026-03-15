@@ -148,6 +148,20 @@ npm run dev
 | `npm run lint` | Check code formatting |
 | `npm run lint:fix` | Fix code formatting |
 
+### Convert article metadata to OJS shape
+
+If you have existing articles with legacy (Stylo) metadata, you can convert them to OJS-shaped metadata in one shot:
+
+```bash
+# From repo root: dry run (no writes)
+cd graphql && npm run convert-metadata-to-ojs:dry
+
+# Apply conversion
+cd graphql && npm run convert-metadata-to-ojs
+```
+
+Migrations also run on `npm run dev` (predev:graphql), so the conversion migration will run automatically for new deploys; the script is for running the conversion manually when needed.
+
 ## Ports Reference
 
 | Service | Port | URL |

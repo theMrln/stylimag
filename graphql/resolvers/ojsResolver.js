@@ -1,7 +1,8 @@
 const ojsHelper = require('../helpers/ojs')
 const {
   extractLocalizedText,
-  mapOjsToStyloMetadata,
+  mapOjsToOjsMetadata,
+  mapOjsIssueToCorpusMetadata,
   extractArticleTitle,
 } = require('../helpers/ojsMetadataMapper')
 const Corpus = require('../models/corpus')
@@ -58,16 +59,14 @@ module.exports = {
         extractLocalizedText(issueMetadata?.name) ||
         `Issue ${issueId}`
 
-      // 2. Create Corpus
+      // 2. Create Corpus (metadata in journal schema shape from issue, ojs kept for reference)
+      const corpusMetadata = mapOjsIssueToCorpusMetadata(issueMetadata)
       const newCorpus = new Corpus({
         name: title,
-        type: 'journal', // Defaulting to journal for OJS imports
+        type: 'journal',
         description: extractLocalizedText(issueMetadata?.description),
         articles: [],
-        metadata: {
-          // Store original OJS metadata for reference
-          ojs: issueMetadata,
-        },
+        metadata: corpusMetadata,
         workspace: workspaceId,
         creator: user._id,
       })
@@ -87,19 +86,25 @@ module.exports = {
         )
       }
 
-      // 4. Create Articles
+      // 4. Create Articles (each submission enriched with full publication for authors etc.)
       let order = 0
+      const sectionTitleCache = new Map()
       for (const submission of submissions) {
-        // Log submission structure for debugging
+        const submissionWithPublication =
+          await ojsHelper.getSubmissionWithFullPublication(instance, submission)
+
         logger.info(
-          `OJS submission keys: ${Object.keys(submission || {}).join(', ')}`
+          `OJS submission keys: ${Object.keys(submissionWithPublication || {}).join(', ')}`
         )
 
         // Extract article title for the Article model
-        const articleTitle = extractArticleTitle(submission)
+        const articleTitle = extractArticleTitle(submissionWithPublication)
 
-        // Map OJS metadata to Stylo metadata format
-        const styloMetadata = mapOjsToStyloMetadata(submission, issueMetadata)
+        // Store metadata in OJS-native shape for export and form editing
+        const articleMetadata = mapOjsToOjsMetadata(
+          submissionWithPublication,
+          issueMetadata
+        )
 
         // Create Yjs doc (empty body - content is added by user)
         const yDoc = new Y.Doc({ gc: false })
@@ -113,14 +118,49 @@ module.exports = {
           workingVersion: {
             md: '',
             bib: '',
-            metadata: styloMetadata,
+            metadata: articleMetadata,
             ydoc: Buffer.from(documentState).toString('base64'),
           },
         })
         await newArticle.save()
 
-        // Add to Corpus
-        newCorpus.articles.push({ article: newArticle, order: order++ })
+        // Add to Corpus (section, sectionTitle, seq from OJS publication for ordering and display)
+        const publication = submissionWithPublication?.publications?.[0]
+        const sectionObj = publication?.section
+        const section =
+          publication?.sectionId ??
+          (typeof sectionObj === 'object' && sectionObj !== null
+            ? sectionObj.id
+            : sectionObj)
+        let sectionTitle =
+          typeof sectionObj === 'object' && sectionObj?.title != null
+            ? extractLocalizedText(sectionObj.title)
+            : publication?.sectionTitle != null
+              ? extractLocalizedText(publication.sectionTitle)
+              : undefined
+        if (section != null && !sectionTitle?.trim()) {
+          const cacheKey = String(section)
+          if (!sectionTitleCache.has(cacheKey)) {
+            const sectionMeta = await ojsHelper.getOjsSection(instance, section)
+            const title = sectionMeta
+              ? (typeof sectionMeta.title === 'string'
+                  ? sectionMeta.title
+                  : extractLocalizedText(sectionMeta.title))
+              : ''
+            sectionTitleCache.set(cacheKey, title)
+          }
+          const cached = sectionTitleCache.get(cacheKey)
+          sectionTitle = cached?.trim() ? cached : undefined
+        }
+        const seq =
+          typeof publication?.seq === 'number' ? publication.seq : order
+        newCorpus.articles.push({
+          article: newArticle,
+          order: order++,
+          section: section != null ? section : undefined,
+          sectionTitle: sectionTitle || undefined,
+          seq,
+        })
 
         // Add to Workspace (if in a workspace)
         if (workspace?.articles && Array.isArray(workspace.articles)) {

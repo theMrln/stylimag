@@ -1,0 +1,21 @@
+@use '../../../styles/defaults' as *;
+@use '../../../styles/variables' as *;
+
+.articleList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.sectionTitle {
+  font-size: 1rem;
+  font-weight: 600;
+  color: $muted-color;
+  margin: 0.75rem 0 0.25rem 0;
+  padding-bottom: 0.25rem;
+  border-bottom: 1px solid $main-border-color;
+
+  &:first-child {
+    margin-top: 0;
+  }
+}

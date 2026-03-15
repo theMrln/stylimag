@@ -161,6 +161,30 @@ describe('ojs helper', () => {
     })
   })
 
+  describe('getOjsSubmission', () => {
+    test('fetches submission with correct URL', async () => {
+      const mockSubmission = {
+        id: 100,
+        currentPublicationId: 456,
+        title: { en_US: 'Submission Title' },
+      }
+      global.fetch.mock.mockImplementation(async () => ({
+        ok: true,
+        json: async () => mockSubmission,
+      }))
+
+      const result = await ojsHelper.getOjsSubmission('staging', 100)
+
+      assert.deepEqual(result, mockSubmission)
+      assert.equal(global.fetch.mock.callCount(), 1)
+      const calledUrl = global.fetch.mock.calls[0].arguments[0]
+      assert.match(
+        calledUrl,
+        /https:\/\/ojs\.example\.com\/api\/v1\/submissions\/100\?apiToken=test-token-123/
+      )
+    })
+  })
+
   describe('getOjsPublication', () => {
     test('fetches publication with correct URL', async () => {
       const mockPublication = {
@@ -183,6 +207,100 @@ describe('ojs helper', () => {
         calledUrl,
         /https:\/\/ojs\.example\.com\/api\/v1\/submissions\/100\/publications\/456\?apiToken=test-token-123/
       )
+    })
+  })
+
+  describe('getSubmissionWithFullPublication', () => {
+    test('enriches submission with full publication when currentPublicationId present', async () => {
+      const articleFromIssue = { id: 100, currentPublicationId: 456 }
+      const mockPublication = {
+        id: 456,
+        submissionId: 100,
+        fullTitle: { en_US: 'Full Title' },
+        authors: [{ givenName: { en_US: 'Jane' }, familyName: { en_US: 'Doe' } }],
+      }
+      global.fetch.mock.mockImplementation(async (url) => ({
+        ok: true,
+        json: async () => {
+          if (url.includes('/publications/')) return mockPublication
+          return articleFromIssue
+        },
+      }))
+
+      const result = await ojsHelper.getSubmissionWithFullPublication(
+        'staging',
+        articleFromIssue
+      )
+
+      assert.equal(result.id, 100)
+      assert.equal(result.publications?.length, 1)
+      assert.deepEqual(result.publications[0], mockPublication)
+      assert.equal(global.fetch.mock.callCount(), 1)
+    })
+
+    test('fetches submission then publication when publicationId missing', async () => {
+      const articleFromIssue = { id: 100 }
+      const mockSubmission = { id: 100, currentPublicationId: 456 }
+      const mockPublication = {
+        id: 456,
+        fullTitle: { en_US: 'Title' },
+        authors: [],
+      }
+      let callCount = 0
+      global.fetch.mock.mockImplementation(async (url) => {
+        callCount++
+        return {
+          ok: true,
+          json: async () => {
+            if (url.includes('/submissions/100') && !url.includes('/publications/'))
+              return mockSubmission
+            return mockPublication
+          },
+        }
+      })
+
+      const result = await ojsHelper.getSubmissionWithFullPublication(
+        'staging',
+        articleFromIssue
+      )
+
+      assert.equal(result.id, 100)
+      assert.equal(result.publications?.length, 1)
+      assert.equal(callCount, 2)
+    })
+
+    test('returns submission unchanged when id missing', async () => {
+      const articleFromIssue = { title: { en_US: 'No id' } }
+      const result = await ojsHelper.getSubmissionWithFullPublication(
+        'staging',
+        articleFromIssue
+      )
+      assert.strictEqual(result, articleFromIssue)
+      assert.equal(global.fetch.mock.callCount(), 0)
+    })
+  })
+
+  describe('getOjsSection', () => {
+    test('fetches section and returns title', async () => {
+      const mockSection = { id: 1, title: { en_US: 'Articles' } }
+      global.fetch.mock.mockImplementation(async () => ({
+        ok: true,
+        json: async () => mockSection,
+      }))
+      const result = await ojsHelper.getOjsSection('staging', 1)
+      assert.deepEqual(result, mockSection)
+      assert.match(
+        global.fetch.mock.calls[0].arguments[0],
+        /\/sections\/1\?apiToken=/
+      )
+    })
+
+    test('returns null when section fetch fails', async () => {
+      global.fetch.mock.mockImplementation(async () => {
+        throw new Error('Not Found')
+      })
+      const result = await ojsHelper.getOjsSection('staging', 999)
+      assert.strictEqual(result, null)
     })
   })
 

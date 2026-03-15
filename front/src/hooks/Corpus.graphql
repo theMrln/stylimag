@@ -26,11 +26,16 @@ query getCorpus(
   $workspaceId: ID
   $includeArticles: Boolean = false
   $includeWorkingVersion: Boolean = false
+  $includeArticleMetadata: Boolean = false
 ) {
   corpus(filter: $filter) {
     ...basicCorpusFields
 
     articles @include(if: $includeArticles) {
+      order
+      section
+      sectionTitle
+      seq
       article {
         _id
         title
@@ -39,6 +44,11 @@ query getCorpus(
           md
           bib
           yaml(options: { strip_markdown: true })
+          metadata
+        }
+
+        workingVersion @include(if: $includeArticleMetadata) {
+          metadata
         }
       }
     }
@@ -90,9 +100,9 @@ mutation createCorpus($createCorpusInput: CreateCorpusInput!) {
   }
 }
 
-mutation deleteCorpus($corpusId: ID!) {
+mutation deleteCorpus($corpusId: ID!, $deleteArticles: Boolean) {
   corpus(corpusId: $corpusId) {
-    delete {
+    delete(deleteArticles: $deleteArticles) {
       _id
     }
   }

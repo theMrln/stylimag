@@ -47,12 +47,13 @@ export function useCorpusActions() {
       }
     })
   }
-  const deleteCorpus = async (corpusId) => {
+  const deleteCorpus = async (corpusId, deleteArticles = false) => {
     await executeQuery({
       sessionToken,
       query: deleteCorpusQuery,
       variables: {
         corpusId,
+        deleteArticles,
       },
     })
     await mutate(async (data) => ({

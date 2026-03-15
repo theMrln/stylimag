@@ -78,7 +78,7 @@ type Corpus {
   articles: [CorpusArticle!]!
   createdAt: DateTime
   creator: User!
-  delete: Corpus!
+  delete(deleteArticles: Boolean): Corpus!
   description: String
   metadata: JSON
   name: String!
@@ -97,6 +97,9 @@ type CorpusArticle {
   move(order: Int): Corpus
   order: Int
   remove: Corpus!
+  section: String
+  sectionTitle: String
+  seq: Int
 }
 
 type InstanceArticleStats implements InstanceObjectUsageStats {

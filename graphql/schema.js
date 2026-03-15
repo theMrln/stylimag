@@ -380,6 +380,9 @@ type CorpusArticle {
   corpus: Corpus!
   article: Article
   order: Int
+  section: String
+  sectionTitle: String
+  seq: Int
 
   # mutation
   remove: Corpus!
@@ -416,7 +419,7 @@ type Corpus {
   rename(name: String!): Corpus
   updateMetadata(metadata: JSON!): Corpus
   updateArticlesOrder(articlesOrderInput: [ArticleOrder!]!): Corpus
-  delete: Corpus!
+  delete(deleteArticles: Boolean): Corpus!
   update(updateCorpusInput: UpdateCorpusInput!): Corpus!
 }
 

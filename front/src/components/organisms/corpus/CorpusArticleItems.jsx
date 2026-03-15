@@ -12,6 +12,8 @@ import CorpusArticleCard from './CorpusArticleCard.jsx'
 
 import { updateArticlesOrder } from '../../../hooks/Corpus.graphql'
 
+import styles from './CorpusArticleItems.module.scss'
+
 export default function CorpusArticleItems({ corpusId, articles, onUpdate }) {
   const { t } = useTranslation('corpus', { useSuspense: false })
   const [isLoading, setLoading] = useState(true)
@@ -89,7 +91,35 @@ export default function CorpusArticleItems({ corpusId, articles, onUpdate }) {
     return <Loading />
   }
 
-  return <div>{articleCards.map((card, i) => renderCard(card, i))}</div>
+  // Build rows: section headers + article cards, in order
+  const rows = []
+  let lastSectionKey = null
+  articles.forEach((item, index) => {
+    const sectionKey = String(item.section ?? '')
+    const sectionTitle =
+      item.sectionTitle?.trim() ||
+      (sectionKey ? t('articles.sectionLabel', { section: sectionKey }) : t('articles.defaultSectionLabel'))
+    if (sectionKey !== lastSectionKey) {
+      rows.push({ type: 'section', key: `section-${sectionKey || 'default'}`, title: sectionTitle })
+      lastSectionKey = sectionKey
+    }
+    const card = articleCards[index]
+    if (card) rows.push({ type: 'article', index, article: card })
+  })
+
+  return (
+    <div className={styles.articleList}>
+      {rows.map((row) =>
+        row.type === 'section' ? (
+          <h3 key={row.key} className={styles.sectionTitle}>
+            {row.title}
+          </h3>
+        ) : (
+          <div key={row.article._id}>{renderCard(row.article, row.index)}</div>
+        )
+      )}
+    </div>
+  )
 }
 
 CorpusArticleItems.propTypes = {

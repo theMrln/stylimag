@@ -9,9 +9,23 @@
   color: #323333;
 }
 
+.articleInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  padding-left: 0.5em;
+  min-width: 0;
+  flex: 1;
+}
+
 .title {
   font-weight: 600;
   font-size: 0.9rem;
-  padding-left: 0.5em;
+  user-select: none;
+}
+
+.authors {
+  font-size: 0.8rem;
+  color: #6b7280;
   user-select: none;
 }

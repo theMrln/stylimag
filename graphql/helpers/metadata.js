@@ -154,6 +154,43 @@ function reformat(yaml, { id, originalUrl, replaceBibliography = false }) {
 }
 
 /**
+ * Detect if metadata is in OJS-native shape (localized title, authors with givenName/familyName objects)
+ * @param {object} metadata
+ * @returns {boolean}
+ */
+function isOjsShape(metadata) {
+  if (!metadata || typeof metadata !== 'object') return false
+  const title = metadata.title
+  const authors = metadata.authors
+  if (title !== null && typeof title === 'object' && !Array.isArray(title)) {
+    if (Object.keys(title).some((k) => ['en_US', 'fr_CA', 'en', 'fr'].includes(k))) return true
+  }
+  if (Array.isArray(authors) && authors.length > 0) {
+    const first = authors[0]
+    if (first && typeof first === 'object' && ('givenName' in first || 'familyName' in first)) return true
+  }
+  return false
+}
+
+/**
+ * Export OJS-shaped metadata to YAML (locale, title, authors, abstract, issue, start_page, short_title, short_author)
+ * @param {object} metadata - OJS-shaped metadata
+ * @returns {object} Plain object for YAML.dump
+ */
+function toLegacyFormatOjs(metadata) {
+  const out = {}
+  if (metadata.locale != null) out.locale = metadata.locale
+  if (metadata.title != null && typeof metadata.title === 'object') out.title = metadata.title
+  if (Array.isArray(metadata.authors) && metadata.authors.length > 0) out.authors = metadata.authors
+  if (metadata.abstract != null && typeof metadata.abstract === 'object') out.abstract = metadata.abstract
+  if (metadata.issue != null && metadata.issue !== '') out.issue = metadata.issue
+  if (metadata.start_page != null) out.start_page = metadata.start_page
+  if (metadata.short_title != null && metadata.short_title !== '') out.short_title = metadata.short_title
+  if (metadata.short_author != null && metadata.short_author !== '') out.short_author = metadata.short_author
+  return out
+}
+
+/**
  * @param {{
  *   'type': string,
  *   '@version': string,
@@ -248,6 +285,9 @@ function reformat(yaml, { id, originalUrl, replaceBibliography = false }) {
  * }}
  */
 function toLegacyFormat(metadata) {
+  if (isOjsShape(metadata)) {
+    return toLegacyFormatOjs(metadata)
+  }
   // unmapped:
   // metadata.journal.url
   const {
@@ -451,7 +491,26 @@ function toLegacyFormat(metadata) {
  *   'journalDirectors': [],
  * }}
  */
+function fromLegacyFormatOjs(metadata) {
+  return {
+    type: 'article',
+    '@version': '1.0',
+    locale: metadata.locale ?? 'en',
+    title: metadata.title && typeof metadata.title === 'object' ? metadata.title : {},
+    authors: Array.isArray(metadata.authors) ? metadata.authors : [],
+    abstract: metadata.abstract && typeof metadata.abstract === 'object' ? metadata.abstract : undefined,
+    issue: metadata.issue,
+    start_page: metadata.start_page ?? 1,
+    short_title: metadata.short_title,
+    short_author: metadata.short_author,
+    ...(metadata.ojs && { ojs: metadata.ojs }),
+  }
+}
+
 function fromLegacyFormat(metadata) {
+  if (isOjsShape(metadata)) {
+    return fromLegacyFormatOjs(metadata)
+  }
   const {
     id,
     lang,
@@ -600,9 +659,95 @@ function toLegacyPerson(p) {
   return p
 }
 
+/**
+ * Convert Stylo (legacy) metadata to OJS shape for storage and export.
+ * Use when migrating existing articles to OJS-only metadata.
+ * @param {object} metadata - Stylo format (title string, authors with forename/surname, etc.)
+ * @returns {object} OJS-shaped metadata (locale, title object, authors with givenName/familyName objects, etc.)
+ */
+function styloToOjsShape(metadata) {
+  if (!metadata || typeof metadata !== 'object') {
+    return { type: 'article', '@version': '1.0', locale: 'en', title: {}, authors: [], start_page: 1 }
+  }
+  if (isOjsShape(metadata)) {
+    return { ...metadata, type: metadata.type ?? 'article', '@version': metadata['@version'] ?? '1.0' }
+  }
+
+  const lang = metadata.lang ?? metadata.locale
+  const localeShort =
+    typeof lang === 'string' ? lang.split('_')[0].toLowerCase() : 'en'
+
+  const title = metadata.title
+  const titleObj =
+    title !== null && typeof title === 'object' && !Array.isArray(title)
+      ? title
+      : typeof title === 'string'
+        ? { en_US: title }
+        : {}
+
+  const authors = metadata.authors
+  const authorsOjs = Array.isArray(authors)
+    ? authors.map((a) => {
+        if (!a || typeof a !== 'object') return { givenName: {}, familyName: {} }
+        const hasOjs =
+          'givenName' in a || 'familyName' in a
+        if (hasOjs) return a
+        return {
+          givenName: a.forename ? { en_US: String(a.forename) } : {},
+          familyName: a.surname ? { en_US: String(a.surname) } : {},
+        }
+      })
+    : []
+
+  const abstract = metadata.abstract
+  const abstractObj =
+    abstract !== null && typeof abstract === 'object' && !Array.isArray(abstract)
+      ? abstract
+      : typeof abstract === 'string'
+        ? { en_US: abstract }
+        : undefined
+
+  const issue = metadata.issue
+  const issueStr =
+    typeof issue === 'string'
+      ? issue
+      : issue && typeof issue === 'object'
+        ? [issue.identifier, issue.number, issue.title].filter(Boolean).join(', ')
+        : undefined
+
+  const firstTitle =
+    typeof titleObj === 'object'
+      ? titleObj.en_US ?? titleObj.en ?? titleObj.fr_CA ?? titleObj.fr ?? Object.values(titleObj)[0]
+      : ''
+  const shortAuthor =
+    authorsOjs.length > 0 && authorsOjs[0].familyName
+      ? (authorsOjs[0].familyName.en_US ??
+          authorsOjs[0].familyName.en ??
+          Object.values(authorsOjs[0].familyName)[0])
+        ?.toLowerCase()
+        ?.replace(/\s+/g, '') ?? ''
+      : ''
+
+  return {
+    type: metadata.type ?? 'article',
+    '@version': metadata['@version'] ?? '1.0',
+    locale: localeShort || 'en',
+    title: Object.keys(titleObj).length ? titleObj : { en_US: 'Untitled' },
+    authors: authorsOjs,
+    abstract: abstractObj,
+    issue: issueStr,
+    start_page: metadata.start_page ?? 1,
+    short_title: metadata.short_title ?? (typeof firstTitle === 'string' ? firstTitle : undefined),
+    short_author: metadata.short_author ?? shortAuthor,
+    ojs: metadata.ojs,
+  }
+}
+
 module.exports = {
   reformat,
   toObject,
   toLegacyFormat,
   fromLegacyFormat,
+  isOjsShape,
+  styloToOjsShape,
 }

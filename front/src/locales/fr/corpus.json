@@ -43,6 +43,7 @@
     "delete": {
       "confirm": "Êtes-vous sûr de vouloir supprimer ce corpus ?",
       "error": "Impossible de supprimer le corpus : {{errMessage}}",
+      "deleteArticlesLabel": "Supprimer aussi tous les articles de ce corpus",
       "label": "Supprimer",
       "success": "Corpus supprimé avec succès.",
       "title": "Supprimer le corpus"
@@ -77,7 +78,9 @@
     }
   },
   "articles": {
-    "label": "Articles"
+    "defaultSectionLabel": "Articles",
+    "label": "Articles",
+    "sectionLabel": "Section {{section}}"
   },
   "description": "Un corpus est une collection dʼarticles triables et exportables en une seule action.",
   "header": "Corpus",

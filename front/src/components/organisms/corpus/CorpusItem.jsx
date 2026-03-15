@@ -1,6 +1,6 @@
 import clsx from 'clsx'
 import { MessageSquareShare, Printer, Settings, Trash } from 'lucide-react'
-import { useCallback, useMemo } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
 import { toast } from 'react-toastify'
@@ -9,6 +9,7 @@ import { useCopyToClipboard } from 'react-use'
 import { useCorpusActions } from '../../../hooks/corpus.js'
 import { useModal } from '../../../hooks/modal.js'
 import { useDisplayName } from '../../../hooks/user.js'
+import { normalizeCorpusMetadataForForm } from '../../../helpers/ojsMapper.js'
 import { Badge, Button } from '../../atoms/index.js'
 import {
   DropdownMenu,
@@ -61,20 +62,22 @@ export default function CorpusItem({ corpus }) {
   const exportCorpusModal = useModal()
   const updateCorpusModal = useModal()
   const metadataCorpusModal = useModal()
+  const [deleteArticles, setDeleteArticles] = useState(false)
 
   const { deleteCorpus } = useCorpusActions()
   const corpusId = useMemo(() => corpus._id, [corpus])
 
   const handleDeleteCorpus = useCallback(async () => {
     try {
-      await deleteCorpus(corpusId)
+      await deleteCorpus(corpusId, deleteArticles)
       toast(t('actions.delete.success'), { type: 'info' })
+      deleteCorpusModal.close()
     } catch (err) {
       toast(`Unable to delete corpus ${corpus.name}: ${err}`, {
         type: 'error',
       })
     }
-  }, [corpusId])
+  }, [corpusId, deleteArticles, deleteCorpus, corpus.name, deleteCorpusModal])
 
   const handleCopyId = useCallback(() => {
     copyToClipboard(corpusId)
@@ -134,7 +137,10 @@ export default function CorpusItem({ corpus }) {
                 {t('actions.copyId.label')}
               </li>
               <li
-                onClick={() => deleteCorpusModal.show()}
+                onClick={() => {
+                  setDeleteArticles(false)
+                  deleteCorpusModal.show()
+                }}
                 title={t('actions.delete.title')}
               >
                 {t('actions.delete.label')}
@@ -161,7 +167,7 @@ export default function CorpusItem({ corpus }) {
         <CorpusMetadata
           corpusId={corpusId}
           corpusType={corpus.type}
-          initialValue={corpus.metadata}
+          initialValue={normalizeCorpusMetadataForForm(corpus.metadata, corpus.type)}
           onCancel={() => metadataCorpusModal.close()}
           onSubmit={() => metadataCorpusModal.close()}
         />
@@ -176,8 +182,19 @@ export default function CorpusItem({ corpus }) {
         }
       >
         <p>{t('actions.delete.confirm')}</p>
+        <label className={styles.deleteArticlesOption}>
+          <input
+            type="checkbox"
+            checked={deleteArticles}
+            onChange={(e) => setDeleteArticles(e.target.checked)}
+          />
+          {t('actions.delete.deleteArticlesLabel')}
+        </label>
         <FormActions
-          onCancel={() => deleteCorpusModal.close()}
+          onCancel={() => {
+            setDeleteArticles(false)
+            deleteCorpusModal.close()
+          }}
           onSubmit={handleDeleteCorpus}
         />
       </Modal>
