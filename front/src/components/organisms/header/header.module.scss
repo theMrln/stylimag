@@ -2,8 +2,11 @@
 @use '../../../styles/variables' as *;
 
 .header {
-  background-color: $main-color;
-  color: $main-background-color;
+  background-color: $header-background;
+  color: $header-color;
+  font-family: $font-sans;
+  border-bottom: 2px solid $header-border;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 
   @media print {
     & {
@@ -23,27 +26,38 @@
 
   a,
   button {
-    background-color: $main-color;
+    background-color: transparent;
     border: none;
-    color: currentColor;
-    font-weight: bold;
+    color: $header-color;
+    font-weight: 500;
     font-size: 1em;
-    text-decoration: underline;
+    text-decoration: none;
 
     &:hover,
     &:focus,
     &[aria-pressed='true'],
     &[aria-current='page'] {
-      text-decoration: none;
+      color: $main-color-links;
+      text-decoration: underline;
     }
   }
 }
 
 .logo {
   margin-right: auto;
+  display: flex;
+  align-items: center;
+  padding: 0.25rem 0;
+  text-decoration: none;
+  color: inherit;
+  flex-shrink: 0;
 
   img {
-    max-height: 2rem;
+    display: block;
+    height: 2.5rem;
+    width: auto;
+    /* Recolor white logo for light header: signature red */
+    filter: brightness(0) saturate(100%) invert(27%) sepia(95%) saturate(2500%) hue-rotate(350deg);
   }
 }
 
@@ -51,7 +65,7 @@
   @extend .header;
   @extend .navigation;
 
-  background-color: $main-color;
+  background-color: $header-background;
   gap: 1em;
   padding: 1em;
   position: absolute;
@@ -93,7 +107,8 @@
   }
 
   .menuLinksMobileVisible {
-    background-color: $main-color;
+    background-color: $header-background;
+    border-bottom: 1px solid $header-border;
     left: 0;
     margin-top: 2em;
     position: absolute;
@@ -169,7 +184,9 @@
  */
 
 .toggleMenuContainer {
-  background-color: $main-color;
+  background-color: $header-background;
+  border: 1px solid $header-border;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
   left: 0;
   margin-top: 0.5em;
   position: absolute;
@@ -178,7 +195,6 @@
   z-index: 1000;
 
   @media screen and (min-width: $screen-breakpoint) {
-    // compensates .toggleMenuList padding
     left: -1em;
   }
 }
@@ -207,6 +223,12 @@
   a,
   button {
     background-color: transparent;
+    color: $header-color;
+
+    &:hover,
+    &:focus {
+      color: $main-color-links;
+    }
   }
 
   @media screen and (min-width: $screen-breakpoint) {
@@ -231,15 +253,11 @@
   }
 }
 
-.logo {
-  a {
-    text-decoration: none;
-
-    img {
-      height: 1em;
-      vertical-align: middle;
-    }
-  }
+.logo a {
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .chip {
@@ -251,7 +269,8 @@
 }
 
 .logoAsImg {
-  background-color: $main-color;
+  background-color: $header-background;
+  border: 1px solid $header-border;
   height: 1em;
   padding: 0.5em;
   box-sizing: content-box;

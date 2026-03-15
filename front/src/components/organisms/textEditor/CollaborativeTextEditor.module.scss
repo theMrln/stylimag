@@ -146,7 +146,7 @@
 
   li[id^='fn']:target {
     background-color: $text-highlight-color;
-    outline: 1px solid #000;
+    outline: 1px solid $imaginations-red;
   }
 }
 

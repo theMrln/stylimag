@@ -1,3 +1,5 @@
+@use '../../styles/variables' as *;
+
 .alert {
   display: flex;
   gap: 0.5rem;
@@ -38,11 +40,13 @@
 }
 
 .info {
-  background-color: rgb(230, 244, 255);
-  border-color: rgb(145, 202, 255);
+  background-color: $info-bar-background;
+  border-color: $info-bar-border;
+  border-left-width: 3px;
+  border-left-color: $info-bar-accent;
 
   &.fullscreen {
-    color: rgb(81, 114, 145);
+    color: $muted-color;
   }
 }
 

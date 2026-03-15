@@ -29,16 +29,28 @@ html {
 }
 
 /*
- * https://typescale.com/
- * 1.067 Minor Second
+ * Imaginations-aligned typography: Merriweather (body), Mulish (headings), red accent for h1–h2
+ * https://typescale.com/ 1.067 Minor Second
  */
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: $font-sans;
+  font-weight: 500;
+}
 
 h1 {
   font-size: 1.476rem;
+  color: $imaginations-red;
 }
 
 h2 {
   font-size: 1.383rem;
+  color: $imaginations-red;
 }
 
 h3 {
@@ -81,7 +93,7 @@ small {
 
   button,
   textarea {
-    font-family: 'Inter', serif;
+    font-family: $font-sans, 'Inter', sans-serif;
     font-size: 1rem;
   }
 
@@ -111,8 +123,9 @@ small {
 
   body {
     color: $main-color;
-    font-family: 'Inter', serif;
+    font-family: $font-serif;
     font-size: 100%;
+    line-height: 1.6;
   }
 
   a {

@@ -130,6 +130,22 @@ $base-spacing: 2em;
   font-size: 1.4em;
 }
 
+.heroLogoWrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 0.25rem;
+}
+
+.heroLogoStylo {
+  display: block;
+  height: 3.25rem;
+  width: auto;
+  /* Recolor white logo for light background: signature red */
+  filter: brightness(0) saturate(100%) invert(27%) sepia(95%) saturate(2500%) hue-rotate(350deg);
+}
+
+
 .spacer {
   margin-bottom: calc($base-spacing * 2) !important;
 }

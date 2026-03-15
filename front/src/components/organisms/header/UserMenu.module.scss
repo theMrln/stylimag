@@ -49,11 +49,15 @@
   align-items: center;
 }
 
+@use '../../../styles/variables' as *;
+
 .menu {
   position: absolute;
   top: 66px;
   left: 0.5em;
-  background-color: #202020;
+  background-color: $header-background;
+  border: 1px solid $header-border;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
   padding: 1em 1.25em;
   z-index: 99;
 }
@@ -63,7 +67,7 @@
   border-radius: 50%;
   width: 2em;
   height: 2em;
-  color: #202020;
+  color: $header-color;
   display: flex;
   align-items: center;
   justify-content: center;

@@ -1,3 +1,5 @@
+@use '../../../styles/variables' as *;
+
 .dot {
   border-radius: 50%;
   height: 0.65em;
@@ -5,11 +7,11 @@
 }
 
 .connecting {
-  background-color: hsl(11, 89%, 95%);
+  background-color: $info-bar-background;
 }
 
 .warning {
-  background-color: hsl(11, 89%, 60%);
+  background-color: $info-bar-accent;
 }
 
 .disconnected {
@@ -17,7 +19,7 @@
 }
 
 .info {
-  background-color: hsl(0, 0%, 30%);
+  background-color: $info-bar-accent;
 }
 
 .loadingIndicator {
@@ -36,6 +38,10 @@
   padding: 0.75rem;
   display: flex;
   justify-content: center;
+  background-color: $info-bar-background;
+  border: 1px solid $info-bar-border;
+  border-left-width: 3px;
+  border-left-color: $info-bar-accent;
 }
 
 @keyframes rotation {

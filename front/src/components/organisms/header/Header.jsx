@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next'
 import { useDispatch } from 'react-redux'
 import { Link, NavLink, useLocation, useRouteLoaderData } from 'react-router'
 
-import logoContent from '/images/logo.svg?inline'
+import logoContent from '/images/logo.svg'
 
 import useComponentVisible from '../../../hooks/componentVisible.js'
 import { useActiveWorkspaceId } from '../../../hooks/workspace.js'
@@ -50,7 +50,7 @@ export default function Header() {
     <header className={styles.header} role="banner">
       <div className={styles.container}>
         <NavLink to="/" rel="home" className={styles.logo}>
-          <img src={logoContent} alt="Stylo" aria-hidden />
+          <img src={logoContent} alt="stylo" />
           <span className="sr-only">{t('header.home')}</span>
         </NavLink>
 

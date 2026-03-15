@@ -14,7 +14,6 @@ import Workshop from '../organisms/publications/Workshop.jsx'
 
 import styles from '../../layout.module.scss'
 import buttonStyles from '../atoms/Button.module.scss'
-import headerStyles from '../organisms/header/header.module.scss'
 
 export default function Home() {
   const { t } = useTranslation('home')
@@ -31,8 +30,12 @@ export default function Home() {
         aria-labelledby="home-title"
         aria-describedby="home-description"
       >
-        <h1 id="home-title">
-          <img src={styloLogo} alt="Stylo" className={headerStyles.logoAsImg} />
+        <h1 id="home-title" className={styles.heroLogoWrap}>
+          <img
+            src={styloLogo}
+            alt="stylo"
+            className={styles.heroLogoStylo}
+          />
         </h1>
 
         <p className={styles.hero} id="home-description">
@@ -60,7 +63,7 @@ export default function Home() {
             target="_blank"
             className={buttonStyles.linkSecondary}
             aria-label={tGlobal('more.about.accessibleLabel', {
-              about: 'Stylo',
+              about: 'stylo',
             })}
           >
             {tGlobal('more.about')}
@@ -112,7 +115,7 @@ export default function Home() {
             target="_blank"
             className={buttonStyles.linkSecondary}
             aria-label={tGlobal('more.about.accessibleLabel', {
-              about: 'Stylo',
+              about: 'stylo',
             })}
           >
             {tGlobal('more.about')}

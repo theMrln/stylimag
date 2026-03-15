@@ -16,7 +16,7 @@ export default function Footer() {
             target="_blank"
             aria-label={t('footer.changelog.link', { version: APP_VERSION })}
           >
-            Stylo {APP_VERSION}
+            stylo {APP_VERSION}
           </a>
         </li>
         <li>

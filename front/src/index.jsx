@@ -204,7 +204,7 @@ const router = createBrowserRouter(
 root.render(
   <React.StrictMode>
     <HelmetProvider>
-      <Helmet defaultTitle="Stylo" titleTemplate="%s - Stylo" />
+      <Helmet defaultTitle="stylo" titleTemplate="%s - stylo" />
       <ReduxProvider store={store}>
         <RouterProvider router={router} />
       </ReduxProvider>

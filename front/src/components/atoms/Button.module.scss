@@ -33,7 +33,7 @@
 
   &:disabled {
     border: none;
-    color: #202020;
+    color: $main-color;
     background-color: #ececec;
     opacity: 1;
     cursor: not-allowed !important;

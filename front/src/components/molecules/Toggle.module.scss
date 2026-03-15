@@ -1,7 +1,7 @@
 @use '../../styles/variables' as *;
 
 .element {
-  --border-color: #202020;
+  --border-color: #{$main-color};
   cursor: pointer;
 
   &.elementActive {

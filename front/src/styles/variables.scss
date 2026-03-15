@@ -1,18 +1,32 @@
+// Imaginations journal alignment (imaginationsjournal.ca / imaginations.dev)
+// Accent: #e9362c (journal red); muted: #828383; text: #1c1b1a
+$imaginations-red: #e9362c;
+
+// Header: light bar with red accents (replaces dark nav)
+$header-background: #ffffff;
+$header-color: #1c1b1a;
+$header-border: rgba(233, 54, 44, 0.2);
+
+// Info/status bars: warm neutral with red accent (replaces light blue)
+$info-bar-background: #fdf6f5;
+$info-bar-border: rgba(233, 54, 44, 0.25);
+$info-bar-accent: $imaginations-red;
+
 // Toggle Darkmode
 // $main-background-color: #202020;
 // $main-color: #f0f0f0;
 // $main-color-links: #ffffff;
 $extra-background-color: #ffffff;
-$main-background-color: #f8f9fa;
-$main-color: #202020;
+$main-background-color: #f8f8f8;
+$main-color: #1c1b1a;
 $main-lighter-color: #4d4d4d;
-$muted-color: #818181;
+$muted-color: #828383;
 $muted-background-color: #ececec;
 $alternate-row-color: #f1f2f2;
-$extra-color: #000000;
-$main-color-links: #1565c0;
+$extra-color: #1c1b1a;
+$main-color-links: $imaginations-red;
 $text-highlight-color: #fedc2a;
-$hover-background: #d1d1d1;
+$hover-background: #e0e0e0;
 
 $main-border-color: #dee2e6;
 
@@ -22,8 +36,8 @@ $warn-color: rgb(250, 173, 20);
 $beware-background: #ffe6e6;
 $selected-background: #e6ffe6;
 
-$button-primary-background: $main-color;
-$button-primary-color: $main-background-color;
+$button-primary-background: $imaginations-red;
+$button-primary-color: #ffffff;
 $button-secondary-background: $extra-background-color;
 $button-secondary-color: $main-border-color;
 
@@ -43,7 +57,14 @@ html {
   font-size: inherit;
 }
 
+$font-serif: 'Merriweather', Georgia, serif;
+$font-sans: 'Mulish', 'Helvetica Neue', sans-serif;
+
 :root {
   --main-border-color: #{$main-border-color};
   --main-color: #{$main-color};
+  --main-color-links: #{$main-color-links};
+  --imaginations-red: #{$imaginations-red};
+  --font-serif: #{$font-serif};
+  --font-sans: #{$font-sans};
 }
