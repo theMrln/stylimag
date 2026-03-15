@@ -1,0 +1,123 @@
+/**
+ * Build HTML for preview header: title, author, abstract in two languages from OJS-shaped metadata.
+ * Used by the article preview to show metadata above the rendered body.
+ */
+
+import {
+  getLocalizedValue,
+  formatAuthorsForLocaleAsLines,
+} from './ojsMapper.js'
+
+const LOCALE_PRIMARY = 'en_US'
+const LOCALE_SECONDARY = 'fr_CA'
+
+function escapeHtml(text) {
+  if (text == null || text === '') return ''
+  const s = String(text)
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
+
+/** Remove placeholder content from export body: "untitled", "Image Notes", etc. */
+function stripPreviewPlaceholders(html) {
+  if (!html || typeof html !== 'string') return html
+  let out = html
+  /* untitled: paragraphs, headings, strong, and divs containing only untitled */
+  out = out
+    .replace(/<p>\s*(\*\*untitled\*\*|untitled)\s*<\/p>/gi, '')
+    .replace(/<p>\s*<strong>\s*untitled\s*<\/strong>\s*<\/p>/gi, '')
+    .replace(/<h[1-6][^>]*>\s*(\*\*untitled\*\*|untitled)\s*<\/h[1-6]>/gi, '')
+    .replace(/<div[^>]*>\s*(\*\*untitled\*\*|untitled)\s*<\/div>/gi, '')
+    .replace(/<p[^>]*>\s*<strong[^>]*>\s*untitled\s*<\/strong>\s*<\/p>/gi, '')
+  /* Image Notes: standalone list item, paragraph, or heading (often appears as first bullet) */
+  out = out
+    .replace(/<li[^>]*>\s*Image Notes\s*<\/li>/gi, '')
+    .replace(/<p[^>]*>\s*Image Notes\s*<\/p>/gi, '')
+    .replace(/<h[1-6][^>]*>\s*Image Notes\s*<\/h[1-6]>/gi, '')
+  return out
+}
+
+
+/**
+ * Build preview HTML with optional metadata header (title, author, abstract in two languages).
+ * Wraps result in <article> when we have header or body. Uses classes compatible with
+ * Imaginations-style preview CSS: h1, .author, .abstract
+ *
+ * @param {object} metadata - OJS-shaped metadata (title, authors, abstract as localized)
+ * @param {string} bodyHtml - Existing preview body HTML from export
+ * @returns {{ headerHtml: string, hasMetadata: boolean, fullArticleHtml: string }}
+ */
+export function buildPreviewWithMetadataHeader(metadata, bodyHtml) {
+  const headerHtml = buildPreviewMetadataHeader(metadata)
+  const hasMetadata = !!(metadata && typeof metadata === 'object')
+  const bodyClean = stripPreviewPlaceholders(bodyHtml || '')
+  const articleInner =
+    hasMetadata && headerHtml
+      ? headerHtml + '\n' + bodyClean
+      : bodyClean
+  const fullArticleHtml = articleInner
+    ? `<article>${articleInner}</article>`
+    : bodyClean || ''
+  return {
+    headerHtml,
+    hasMetadata,
+    fullArticleHtml,
+  }
+}
+
+/**
+ * Build only the metadata header HTML (title, author, abstract in two languages).
+ *
+ * @param {object} metadata - OJS-shaped metadata
+ * @returns {string} HTML fragment (no wrapper)
+ */
+export function buildPreviewMetadataHeader(metadata) {
+  if (!metadata || typeof metadata !== 'object') return ''
+
+  const titleEn = getLocalizedValue(metadata.title, LOCALE_PRIMARY)
+  const titleFr = getLocalizedValue(metadata.title, LOCALE_SECONDARY)
+  const authorsEnLines = formatAuthorsForLocaleAsLines(metadata.authors, LOCALE_PRIMARY)
+  const authorsFrLines = formatAuthorsForLocaleAsLines(metadata.authors, LOCALE_SECONDARY)
+  const abstractEn = getLocalizedValue(metadata.abstract, LOCALE_PRIMARY)
+  const abstractFr = getLocalizedValue(metadata.abstract, LOCALE_SECONDARY)
+
+  const parts = []
+
+  if (titleEn) {
+    parts.push(`<h1 class="preview-title preview-lang-en">${escapeHtml(titleEn)}</h1>`)
+  }
+  if (titleFr && titleFr !== titleEn) {
+    parts.push(`<h1 class="preview-title preview-lang-fr">${escapeHtml(titleFr)}</h1>`)
+  } else if (titleFr) {
+    parts.push(`<h1 class="preview-title preview-lang-fr">${escapeHtml(titleFr)}</h1>`)
+  }
+
+  if (authorsEnLines.length > 0) {
+    const authorPs = authorsEnLines
+      .map((a) => `<p>${escapeHtml(a)}</p>`)
+      .join('')
+    parts.push(`<div class="author preview-lang-en">${authorPs}</div>`)
+  }
+  if (authorsFrLines.length > 0) {
+    const authorPs = authorsFrLines
+      .map((a) => `<p>${escapeHtml(a)}</p>`)
+      .join('')
+    parts.push(`<div class="author preview-lang-fr">${authorPs}</div>`)
+  }
+
+  if (abstractEn) {
+    parts.push(`<div class="abstract preview-lang-en"><p>${escapeHtml(abstractEn)}</p></div>`)
+  }
+  if (abstractFr && abstractFr !== abstractEn) {
+    parts.push(`<div class="abstract preview-lang-fr"><p>${escapeHtml(abstractFr)}</p></div>`)
+  } else if (abstractFr) {
+    parts.push(`<div class="abstract preview-lang-fr"><p>${escapeHtml(abstractFr)}</p></div>`)
+  }
+
+  if (parts.length === 0) return ''
+  return '<header class="preview-metadata-header">\n' + parts.join('\n') + '\n</header>'
+}

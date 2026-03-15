@@ -22,12 +22,15 @@ import { useBibliographyCompletion } from '../../../hooks/bibliography.js'
 import { useCollaboration } from '../../../hooks/collaboration.js'
 import { useModal } from '../../../hooks/modal.js'
 import { useStyloExportPreview } from '../../../hooks/stylo-export.js'
+import { buildPreviewWithMetadataHeader } from '../../../helpers/previewMetadata.js'
 import defaultEditorOptions from '../monaco/options.js'
 import { onDropIntoEditor, importMarkdownContent, readFileAsText } from '../bibliography/support.js'
+import previewImaginationsCss from '../../../styles/preview-imaginations.css?raw'
 
 import Alert from '../../molecules/Alert.jsx'
 import Button from '../../atoms/Button.jsx'
 import Loading from '../../molecules/Loading.jsx'
+import { Toggle } from '../../molecules/index.js'
 import MonacoEditor from '../../molecules/MonacoEditor.jsx'
 import CollaborativeEditorArticleHeader from './CollaborativeEditorArticleHeader.jsx'
 import CollaborativeEditorWebSocketStatus from './CollaborativeEditorWebSocketStatus.jsx'
@@ -62,6 +65,7 @@ export default function CollaborativeTextEditor({
   const importModal = useModal()
   const [pendingImportFile, setPendingImportFile] = useState(null)
   const fileInputRef = useRef(null)
+  const [previewStyle, setPreviewStyle] = useState('imaginations') // 'imaginations' | 'standard'
 
   const {
     version,
@@ -102,6 +106,19 @@ export default function CollaborativeTextEditor({
   )
 
   const hasVersion = useMemo(() => !!versionId, [versionId])
+  const previewMetadata = useMemo(
+    () =>
+      hasVersion ? version?.metadata : article?.workingVersion?.metadata,
+    [hasVersion, version?.metadata, article?.workingVersion?.metadata]
+  )
+  const previewHtml = useMemo(() => {
+    if (mode !== 'preview' || !__html) return __html ?? ''
+    const { fullArticleHtml } = buildPreviewWithMetadataHeader(
+      previewMetadata,
+      __html
+    )
+    return fullArticleHtml || __html
+  }, [mode, __html, previewMetadata])
   const isLoading =
     yText === null ||
     isPreviewLoading ||
@@ -325,11 +342,37 @@ export default function CollaborativeTextEditor({
         </div>
       )}
 
+      {/* Preview style switch - shown when in preview mode */}
       {mode === 'preview' && (
+        <div className={styles.editorToolbar}>
+          <Toggle
+            id="preview-style-imaginations"
+            checked={previewStyle === 'imaginations'}
+            title={tCommon('article.editor.previewImaginations')}
+            onChange={(checked) =>
+              setPreviewStyle(checked ? 'imaginations' : 'standard')
+            }
+          >
+            {previewStyle === 'imaginations'
+              ? tCommon('article.editor.previewImaginations')
+              : tCommon('article.editor.previewStandard')}
+          </Toggle>
+        </div>
+      )}
+
+      {mode === 'preview' && previewStyle === 'imaginations' && (
         <section
-          className={styles.previewPage}
-          dangerouslySetInnerHTML={{ __html }}
-        />
+          className={`${styles.previewPage} stylo-preview-imaginations`}
+        >
+          <style>{previewImaginationsCss}</style>
+          <div dangerouslySetInnerHTML={{ __html: previewHtml }} />
+        </section>
+      )}
+
+      {mode === 'preview' && previewStyle === 'standard' && (
+        <section className={styles.previewPage}>
+          <div dangerouslySetInnerHTML={{ __html: __html ?? '' }} />
+        </section>
       )}
 
       {mode === 'compare' && (

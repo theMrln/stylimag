@@ -34,6 +34,8 @@
   },
   "article.editor.modes.menuLabel": "Modes d'article",
   "article.editor.preview": "Aperçu",
+  "article.editor.previewImaginations": "Style Imaginations",
+  "article.editor.previewStandard": "Aperçu standard",
   "article.editors.label": "Collaborateurs en ligne",
   "article.filter.label": "Filtrer",
   "article.filter.placeholder": "Par titre dʼarticle",

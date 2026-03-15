@@ -34,6 +34,8 @@
   },
   "article.editor.modes.menuLabel": "Article modes",
   "article.editor.preview": "Preview",
+  "article.editor.previewImaginations": "Imaginations style",
+  "article.editor.previewStandard": "Standard preview",
   "article.editors.label": "Editors online",
   "article.filter.label": "Filter",
   "article.filter.placeholder": "By article title",

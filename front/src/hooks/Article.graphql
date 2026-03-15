@@ -5,6 +5,7 @@ fragment articleVersionFields on Version {
   name
   md
   bib
+  metadata
   bibliography {
     authorName
     date
@@ -39,6 +40,7 @@ fragment editableArticleFields on Article {
   workingVersion {
     md
     bib
+    metadata
     bibliography {
       authorName
       date

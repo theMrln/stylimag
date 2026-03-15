@@ -27,6 +27,59 @@ function extractLocalizedText(obj, fallback = '') {
 }
 
 /**
+ * Get string for a specific locale from a localized object (e.g. title, abstract)
+ * @param {object|string} obj - Localized object { en_US: "...", fr_CA: "..." } or string
+ * @param {string} locale - Preferred locale key (e.g. 'en_US', 'fr_CA')
+ * @param {string} fallback
+ * @returns {string}
+ */
+export function getLocalizedValue(obj, locale, fallback = '') {
+  if (!obj) return fallback
+  if (typeof obj === 'string') return obj
+  const v = obj[locale] ?? obj[locale?.replace('-', '_')] ?? obj[locale?.split('_')[0]]
+  return (typeof v === 'string' && v.trim()) ? v.trim() : fallback
+}
+
+/**
+ * Format authors for a given locale (OJS shape: givenName/familyName as localized objects)
+ * Returns "Family, Given" order (e.g. for citations).
+ * @param {Array<{ givenName?: object|string, familyName?: object|string, forename?: string, surname?: string }>} authors
+ * @param {string} locale - e.g. 'en_US', 'fr_CA'
+ * @returns {string}
+ */
+export function formatAuthorsForLocale(authors, locale) {
+  if (!Array.isArray(authors) || authors.length === 0) return ''
+  return authors
+    .map((a) => {
+      const given = getLocalizedValue(a.givenName, locale) || (a.forename || '').trim()
+      const family = getLocalizedValue(a.familyName, locale) || (a.surname || '').trim()
+      if (family && given) return `${family}, ${given}`
+      return family || given
+    })
+    .filter(Boolean)
+    .join('; ')
+}
+
+/**
+ * Format authors for a given locale as an array of "First Last" strings (one per author).
+ * Use for preview display: one line per author, centered.
+ * @param {Array<{ givenName?: object|string, familyName?: object|string, forename?: string, surname?: string }>} authors
+ * @param {string} locale - e.g. 'en_US', 'fr_CA'
+ * @returns {string[]}
+ */
+export function formatAuthorsForLocaleAsLines(authors, locale) {
+  if (!Array.isArray(authors) || authors.length === 0) return []
+  return authors
+    .map((a) => {
+      const given = getLocalizedValue(a.givenName, locale) || (a.forename || '').trim()
+      const family = getLocalizedValue(a.familyName, locale) || (a.surname || '').trim()
+      if (given && family) return `${given} ${family}`
+      return family || given
+    })
+    .filter(Boolean)
+}
+
+/**
  * Map OJS locale to short locale (en_US -> en)
  * @param {string} ojsLocale
  * @returns {string}
@@ -285,6 +338,9 @@ export default {
   normalizeMetadataToOjsShape,
   mapOjsIssueToCorpusMetadata,
   normalizeCorpusMetadataForForm,
+  getLocalizedValue,
+  formatAuthorsForLocale,
+  formatAuthorsForLocaleAsLines,
   extractLocalizedText,
   mapLocale,
 }

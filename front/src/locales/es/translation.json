@@ -34,6 +34,8 @@
   },
   "article.editor.modes.menuLabel": "Modos de artículo",
   "article.editor.preview": "Vista previa",
+  "article.editor.previewImaginations": "Estilo Imaginations",
+  "article.editor.previewStandard": "Vista previa estándar",
   "article.editors.label": "Editores en línea",
   "article.filter.label": "Filtrar",
   "article.filter.placeholder": "Por título de artículo",
