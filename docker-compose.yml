@@ -1,0 +1,54 @@
+services:
+  mongo:
+    image: mongo:6
+    container_name: stylo-mongo
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_DATABASE: stylo
+    volumes:
+      - mongo_data:/data/db
+    ports:
+      - "27017:27017"
+
+  graphql:
+    build:
+      context: ./graphql
+      dockerfile: dockerfile
+    container_name: stylo-graphql
+    restart: unless-stopped
+    depends_on:
+      - mongo
+    env_file:
+      - .env
+    environment:
+      # Ensure the API uses the mongo container, not localhost
+      DATABASE_URL: mongodb://mongo:27017/stylo
+      NODE_ENV: production
+      # Allow CORS from localhost (browser sends Origin: http://localhost:3000)
+      ALLOW_CORS_FRONTEND: "http://localhost:3000 http://127.0.0.1:3000 http://127.0.0.1:3030"
+    volumes:
+      # Mount config dir so ojs.json can be added (copy from ojs.example.json)
+      - ./config:/usr/src/app/config:ro
+    ports:
+      - "3030:3030"
+
+  front:
+    build:
+      context: ./front
+      dockerfile: dockerfile
+      args:
+        # Same-origin URLs; nginx proxies API to graphql container (avoids CORS/cookies)
+        SNOWPACK_PUBLIC_BACKEND_ENDPOINT: http://localhost:3000
+        SNOWPACK_PUBLIC_GRAPHQL_ENDPOINT: http://localhost:3000/graphql
+    container_name: stylo-front
+    restart: unless-stopped
+    depends_on:
+      - graphql
+    environment:
+      NODE_ENV: production
+    ports:
+      - "3000:80"
+
+volumes:
+  mongo_data:
+
