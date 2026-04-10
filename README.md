@@ -74,6 +74,14 @@ docker compose up mongodb-stylo export-stylo pandoc-api
 npm run dev
 ```
 
+Si vous changez de machine (ou si Docker semble réutiliser une version trop ancienne des images), utilisez le script de reset Docker depuis la racine du dépôt :
+
+```bash
+./scripts/docker-reset.sh
+```
+
+Ce script met à jour la branche (`git pull --ff-only`), reconstruit les images locales et recrée les conteneurs.
+
 L'[interface web de Stylo](./front) est alors disponible sur ([`localhost:3000`](http://localhost:3000)).<br>
 L'[API GraphQL](./graphql) fonctionne sur [`localhost:3030`](http://localhost:3030/) et le [service d'export](./export) sur [`localhost:3080`](http://localhost:3080/).
 
