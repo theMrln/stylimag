@@ -33,6 +33,27 @@ This gives your access to:
 - Export endpoint: http://localhost:3080
 - Pandoc API: http://localhost:3090
 
+### Run locally from prebuilt Docker Hub images (no local build)
+
+If you already have published app images on Docker Hub, run Stylo locally without rebuilding `graphql` and `front`:
+
+    $ ./scripts/docker-run-from-hub.sh --user <dockerhub_user> --tag <tag>
+
+This script:
+- bootstraps `.env` and `config/ojs.json` from example files if missing
+- pulls `<dockerhub_user>/stylimag-graphql:<tag>` and `<dockerhub_user>/stylimag-front:<tag>`
+- tags them locally as `stylimag-graphql:latest` and `stylimag-front:latest` (expected by compose)
+- starts `docker compose up -d --no-build mongo graphql front`
+
+To upgrade later, run it again with another tag:
+
+    $ ./scripts/docker-run-from-hub.sh --user <dockerhub_user> --tag <new_tag>
+
+Other variants:
+
+    $ ./scripts/docker-run-from-hub.sh --user <dockerhub_user>          # default tag: latest
+    $ ./scripts/docker-run-from-hub.sh --user <dockerhub_user> --no-up  # pull + tag only
+
 ## Run without Docker
 
 **Note**: this section can be improved.
@@ -82,6 +103,27 @@ When you are done, enable the website and reload the configuration:
     $ pip install ansible===2.9.7 requests
     $ cd infrastructure
     $ ansible-playbook -i inventories/prod playbook.yml
+
+## Publish Docker images to Docker Hub
+
+If you want to publish the app images built from this repository (`graphql` and `front`) to Docker Hub, use:
+
+    $ ./scripts/docker-push-images.sh --user <dockerhub_user>
+
+This script performs:
+- Docker Hub login (`docker login`)
+- `docker compose build graphql front`
+- image tagging with current git short SHA (and `latest` by default)
+- push to Docker Hub
+- pull verification
+
+Common variants:
+
+    $ ./scripts/docker-push-images.sh --user <dockerhub_user> --tag v1.2.0
+    $ ./scripts/docker-push-images.sh --user <dockerhub_user> --tag v1.2.0 --no-latest
+    $ ./scripts/docker-push-images.sh --user <dockerhub_user> --skip-login
+
+Note: Mongo is referenced as upstream `mongo:6` in compose and is not built/pushed by this script.
 
 ## Next steps
 
