@@ -147,6 +147,13 @@ Common variants:
 
 Note: Mongo is referenced as upstream `mongo:6` in compose and is not built/pushed by this script.
 
+## Docker persistence model
+
+- MongoDB data is persisted in the Docker named volume `mongo_data` (`mongo_data:/data/db`).
+- OJS config is persisted on the host in `config/ojs.json`, mounted read-only into GraphQL (`./config:/usr/src/app/config:ro`).
+- Environment values are persisted on the host in `.env` (loaded via `env_file`).
+- `front` and `graphql` application files live in image layers; runtime writes inside containers are ephemeral unless explicitly mounted to a volume.
+
 ## Next steps
 
 Once you have an up and running Stylo instance, read the [`SERVER.md` file](SERVER.md) to run daily and maintenance operations, such as database migrations and such.

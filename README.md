@@ -169,6 +169,13 @@ Depuis la racine du dépôt :
 - `./scripts/docker-push-images.sh --user <dockerhub_user> [--tag <tag>]` : build, tag et push les images `graphql` et `front` vers Docker Hub.
 - `./scripts/docker-run-from-hub.sh --user <dockerhub_user> [--tag <tag>]` : pull les images publiées, applique les tags locaux attendus et lance la stack sans rebuild.
 
+## Modèle de persistance Docker
+
+- Base MongoDB : persistée dans le volume Docker nommé `mongo_data` (`mongo_data:/data/db`).
+- Config OJS : persistée sur l'hôte dans `config/ojs.json`, montée en lecture seule dans GraphQL (`./config:/usr/src/app/config:ro`).
+- Variables d'environnement : persistées sur l'hôte dans `.env` (chargé par `env_file`).
+- Images `front` et `graphql` : contiennent l'application buildée ; toute écriture interne au conteneur est éphémère sans volume dédié.
+
 L'[interface web de Stylo](./front) est alors disponible sur ([`localhost:3000`](http://localhost:3000)).<br>
 L'[API GraphQL](./graphql) fonctionne sur [`localhost:3030`](http://localhost:3030/) et le [service d'export](./export) sur [`localhost:3080`](http://localhost:3080/).
 
