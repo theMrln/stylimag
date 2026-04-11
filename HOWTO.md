@@ -39,6 +39,25 @@ If you already have published app images on Docker Hub, run Stylo locally withou
 
     $ ./scripts/docker-run-from-hub.sh --user <dockerhub_user> --tag <tag>
 
+Equivalent manual steps:
+
+1. Pull/run images (pull published images and prepare compose image names):
+
+    $ docker pull <dockerhub_user>/stylimag-graphql:<tag>
+    $ docker pull <dockerhub_user>/stylimag-front:<tag>
+    $ docker tag <dockerhub_user>/stylimag-graphql:<tag> stylimag-graphql:latest
+    $ docker tag <dockerhub_user>/stylimag-front:<tag> stylimag-front:latest
+
+2. Create local `config/ojs.json` from `config/ojs.example.json`:
+
+    $ cp config/ojs.example.json config/ojs.json
+
+3. Fill real `api_endpoint` and `api_token` values in `config/ojs.json`.
+
+4. Start compose (which mounts `./config` into the GraphQL container as read-only):
+
+    $ docker compose up -d --no-build mongo graphql front
+
 This script:
 - bootstraps `.env` and `config/ojs.json` from example files if missing
 - pulls `<dockerhub_user>/stylimag-graphql:<tag>` and `<dockerhub_user>/stylimag-front:<tag>`
@@ -53,6 +72,9 @@ Other variants:
 
     $ ./scripts/docker-run-from-hub.sh --user <dockerhub_user>          # default tag: latest
     $ ./scripts/docker-run-from-hub.sh --user <dockerhub_user> --no-up  # pull + tag only
+
+Troubleshooting OJS:
+- If OJS import fails with `OJS configuration missing for instance "...". Check config/ojs.json`, ensure `config/ojs.json` exists, is valid JSON, and includes `api_endpoint` and `api_token` for the selected instance (`staging` or `production`).
 
 ## Run without Docker
 

@@ -82,6 +82,25 @@ Si vous avez déjà publié les images `graphql` et `front` sur Docker Hub, util
 ./scripts/docker-run-from-hub.sh --user <dockerhub_user> --tag <tag>
 ```
 
+Étapes manuelles équivalentes (si vous ne souhaitez pas utiliser le script) :
+
+1. Pull/run images (récupérer les images publiées, puis préparer le lancement compose) :
+```bash
+docker pull <dockerhub_user>/stylimag-graphql:<tag>
+docker pull <dockerhub_user>/stylimag-front:<tag>
+docker tag <dockerhub_user>/stylimag-graphql:<tag> stylimag-graphql:latest
+docker tag <dockerhub_user>/stylimag-front:<tag> stylimag-front:latest
+```
+2. Créer `config/ojs.json` depuis `config/ojs.example.json` :
+```bash
+cp config/ojs.example.json config/ojs.json
+```
+3. Renseigner les vraies valeurs `api_endpoint` et `api_token` dans `config/ojs.json`.
+4. Démarrer compose (montage `./config` en lecture seule dans le conteneur GraphQL) :
+```bash
+docker compose up -d --no-build mongo graphql front
+```
+
 Le script :
 - crée `.env` et `config/ojs.json` depuis les fichiers d'exemple s'ils sont absents
 - fait le `docker pull` des images `stylimag-graphql` et `stylimag-front`
@@ -105,6 +124,9 @@ Options utiles :
 ./scripts/docker-run-from-hub.sh --user <dockerhub_user> --no-up     # pull + tag uniquement
 ./scripts/docker-run-from-hub.sh --user <dockerhub_user> --skip-bootstrap
 ```
+
+Dépannage OJS :
+- Si l'import OJS échoue avec `OJS configuration missing for instance "...". Check config/ojs.json`, vérifiez que `config/ojs.json` existe bien, est valide en JSON, et contient les clés `api_endpoint` et `api_token` pour l'instance utilisée (`staging` ou `production`).
 
 Si vous changez de machine (ou si Docker semble réutiliser une version trop ancienne des images), utilisez le script de reset Docker depuis la racine du dépôt :
 
