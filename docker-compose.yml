@@ -10,6 +10,20 @@ services:
     ports:
       - "27017:27017"
 
+  minio:
+    image: minio/minio:latest
+    container_name: stylo-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${STORAGE_ACCESS_KEY:-styloadmin}
+      MINIO_ROOT_PASSWORD: ${STORAGE_SECRET_KEY:-styloadminsecret}
+    volumes:
+      - minio_data:/data
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+
   graphql:
     build:
       context: ./graphql
@@ -18,16 +32,20 @@ services:
     restart: unless-stopped
     depends_on:
       - mongo
+      - minio
     env_file:
       - .env
     environment:
-      # Ensure the API uses the mongo container, not localhost
       DATABASE_URL: mongodb://mongo:27017/stylo
       NODE_ENV: production
-      # Allow CORS from localhost (browser sends Origin: http://localhost:3000)
       ALLOW_CORS_FRONTEND: "http://localhost:3000 http://127.0.0.1:3000 http://127.0.0.1:3030"
+      STORAGE_ENDPOINT: ${STORAGE_ENDPOINT:-http://minio:9000}
+      STORAGE_REGION: ${STORAGE_REGION:-us-east-1}
+      STORAGE_BUCKET: ${STORAGE_BUCKET:-stylimag-assets}
+      STORAGE_ACCESS_KEY: ${STORAGE_ACCESS_KEY:-styloadmin}
+      STORAGE_SECRET_KEY: ${STORAGE_SECRET_KEY:-styloadminsecret}
+      STORAGE_FORCE_PATH_STYLE: "true"
     volumes:
-      # Mount config dir so ojs.json can be added (copy from ojs.example.json)
       - ./config:/usr/src/app/config:ro
     ports:
       - "3030:3030"
@@ -51,4 +69,5 @@ services:
 
 volumes:
   mongo_data:
+  minio_data:
 

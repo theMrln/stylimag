@@ -257,6 +257,46 @@ module.exports = convict({
       nullable: true,
     },
   },
+  storage: {
+    endpoint: {
+      format: String,
+      env: 'STORAGE_ENDPOINT',
+      default: '',
+      nullable: true,
+    },
+    region: {
+      format: String,
+      env: 'STORAGE_REGION',
+      default: 'us-east-1',
+    },
+    bucket: {
+      format: String,
+      env: 'STORAGE_BUCKET',
+      default: 'stylimag-assets',
+    },
+    accessKey: {
+      format: String,
+      sensitive: true,
+      env: 'STORAGE_ACCESS_KEY',
+      default: '',
+    },
+    secretKey: {
+      format: String,
+      sensitive: true,
+      env: 'STORAGE_SECRET_KEY',
+      default: '',
+    },
+    forcePathStyle: {
+      format: Boolean,
+      env: 'STORAGE_FORCE_PATH_STYLE',
+      default: true,
+    },
+    maxUploadBytes: {
+      format: 'int',
+      env: 'STORAGE_MAX_UPLOAD_BYTES',
+      default: 25 * 1024 * 1024,
+    },
+  },
   collaboration: {
     updateWorkingCopyIntervalMs: {
       format: 'int',

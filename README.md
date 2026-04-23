@@ -172,9 +172,35 @@ Depuis la racine du dépôt :
 ## Modèle de persistance Docker
 
 - Base MongoDB : persistée dans le volume Docker nommé `mongo_data` (`mongo_data:/data/db`).
+- Stockage d'objets (MinIO) : persistée dans le volume Docker `minio_data` (`minio_data:/data`). Sert au stockage binaire (images déposées dans les articles, exports HTML/PDF générés).
 - Config OJS : persistée sur l'hôte dans `config/ojs.json`, montée en lecture seule dans GraphQL (`./config:/usr/src/app/config:ro`).
-- Variables d'environnement : persistées sur l'hôte dans `.env` (chargé par `env_file`).
+- Variables d'environnement : persistées sur l'hôte dans `.env` (chargé par `env_file`). Les variables `STORAGE_*` contrôlent la connexion au stockage d'objets (endpoint, bucket, identifiants).
 - Images `front` et `graphql` : contiennent l'application buildée ; toute écriture interne au conteneur est éphémère sans volume dédié.
+
+### Stockage d'objets (images et exports)
+
+Les images déposées dans l'éditeur Markdown sont désormais envoyées au backend (`POST /assets/images`), stockées dans MinIO (bucket `stylimag-assets` par défaut) et référencées dans le Markdown par une URL stable servie par GraphQL (`/assets/images/{id}`). Si le stockage d'objets n'est pas configuré et qu'un `SNOWPACK_IMGUR_CLIENT_ID` est fourni, le front retombe sur Imgur comme secours.
+
+- La console MinIO est disponible localement sur [`http://localhost:9001`](http://localhost:9001) (identifiants : `STORAGE_ACCESS_KEY` / `STORAGE_SECRET_KEY`).
+- Le bucket est créé automatiquement au premier upload si absent.
+- Les artefacts d'export (HTML/PDF) sont persistés côté backend via `POST /assets/exports` (upload multipart) et `POST /assets/exports/from-url` (le backend télécharge l'URL générée par le service pandoc puis la stocke). Lorsqu'un utilisateur clique sur « Exporter » dans le front, ce dernier déclenche automatiquement une persistance via `from-url` en plus du téléchargement direct. Les artefacts sont suivis dans le modèle Mongo `ExportArtifact` et récupérables via `GET /assets/exports/:id` (authentifié).
+
+### Compatibilité et migration des images externes
+
+- Les articles existants référençant des URLs externes (Imgur, etc.) continuent de fonctionner sans changement : aucune réécriture n'est forcée.
+- Un script opt-in permet de migrer ces URLs vers le stockage local :
+
+```bash
+cd graphql
+# dry-run (aucune écriture)
+npm run migrate-images-to-assets:dry
+# exécution réelle
+npm run migrate-images-to-assets
+# limiter à certains hôtes ou articles
+HOSTS=i.imgur.com,imgur.com ARTICLE_IDS=<id1>,<id2> npm run migrate-images-to-assets
+```
+
+Le script télécharge chaque image, l'ajoute au bucket d'objets, crée un document `Asset`, puis remplace l'URL externe par `/assets/images/<id>` dans `workingVersion.md`.
 
 L'[interface web de Stylo](./front) est alors disponible sur ([`localhost:3000`](http://localhost:3000)).<br>
 L'[API GraphQL](./graphql) fonctionne sur [`localhost:3030`](http://localhost:3030/) et le [service d'export](./export) sur [`localhost:3080`](http://localhost:3080/).

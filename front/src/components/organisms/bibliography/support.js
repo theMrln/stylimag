@@ -126,55 +126,120 @@ export class BibliographyCompletionProvider {
 }
 
 /**
+ * Upload an image to the backend `/assets/images` endpoint, which persists
+ * it in object storage and returns a stable platform-relative URL.
+ *
+ * @param {File} file
+ * @param {object} [ctx]
+ * @param {string} [ctx.articleId]
+ * @returns {Promise<string|null>} platform URL (e.g. `/assets/images/<id>`) or null on failure
+ */
+async function uploadImageToBackend(file, { articleId } = {}) {
+  if (!applicationConfig.backendEndpoint) {
+    return null
+  }
+  const formData = new FormData()
+  formData.append('file', file)
+  if (articleId) {
+    formData.append('articleId', articleId)
+  }
+  const response = await fetch(
+    `${applicationConfig.backendEndpoint}/assets/images`,
+    {
+      method: 'POST',
+      credentials: 'include',
+      body: formData,
+    }
+  )
+  if (!response.ok) {
+    let body = ''
+    try {
+      body = JSON.stringify(await response.json())
+    } catch {
+      // ignore
+    }
+    console.warn(
+      `Backend image upload failed for ${file.name} (status ${response.status}): ${body}`
+    )
+    return null
+  }
+  const result = await response.json()
+  if (!result || !result.url) {
+    return null
+  }
+  return `${applicationConfig.backendEndpoint}${result.url}`
+}
+
+/**
+ * Upload an image to Imgur. Kept as a fallback when the backend is not
+ * reachable or storage is not configured.
+ *
+ * @param {File} file
+ * @returns {Promise<string|null>} Imgur URL or null on failure
+ */
+async function uploadImageToImgur(file) {
+  const clientId = applicationConfig.imgurClientId
+  if (!clientId || clientId.trim() === '') {
+    return null
+  }
+  const formData = new FormData()
+  formData.append('image', file)
+  formData.append('title', file.name)
+  const response = await fetch('https://api.imgur.com/3/image', {
+    method: 'POST',
+    headers: { Authorization: `Client-ID ${clientId}` },
+    body: formData,
+  })
+  if (!response.ok) {
+    let body = ''
+    try {
+      body = JSON.stringify(await response.json())
+    } catch {
+      // ignore
+    }
+    console.error(
+      `Imgur upload failed for ${file.name} (status ${response.status}): ${body}`
+    )
+    return null
+  }
+  const result = await response.json()
+  return result?.data?.link || null
+}
+
+/**
  * Creates a drop handler for the Monaco editor
  * @param {import('monaco-editor').editor.IStandaloneCodeEditor} editor
  * @param {object} options
- * @param {(file: File) => void} options.onMarkdownFile - Callback when a markdown file is dropped
+ * @param {(file: File) => void} [options.onMarkdownFile] - Callback when a markdown file is dropped
+ * @param {string} [options.articleId] - Current article id, used to bind uploaded assets
  * @returns {function}
  */
 export function onDropIntoEditor(editor, options = {}) {
-  const { onMarkdownFile } = options
-  
+  const { onMarkdownFile, articleId } = options
+
   return async ({ position, event }) => {
     event.preventDefault()
-    
+
     try {
       const files = event.dataTransfer.files
-      
-      // Check for markdown files first
+
       for (const file of files) {
         if (isMarkdownFile(file)) {
           if (onMarkdownFile) {
             onMarkdownFile(file)
           } else {
-            // Fallback: insert content at cursor if no callback provided
             const content = await readFileAsText(file)
             importMarkdownContent(editor, content, 'insert')
           }
-          return // Only handle first markdown file
+          return
         }
       }
-      
-      // Handle image files (existing behavior)
-      if (window.location.hostname === 'localhost') {
-        console.debug(
-          'imgur.com disallows API call from localhost, cannot upload images'
-        )
-      }
-      if (
-        applicationConfig.imgurClientId === undefined ||
-        applicationConfig.imgurClientId.trim() === ''
-      ) {
-        console.warn(
-          `IMGUR_CLIENT_ID is empty or undefined, cannot upload images`
-        )
-      }
-      
+
       const lineNumber = position.lineNumber
       let column = position.column
       for (const file of files) {
         if (!isImageFile(file)) continue
-        
+
         const placeholder = `<!-- Uploading ${file.name} -->`
         editor.executeEdits('insert-uploading-placeholder', [
           {
@@ -189,45 +254,39 @@ export function onDropIntoEditor(editor, options = {}) {
           column,
         })
       }
+
       for (const file of files) {
         if (!isImageFile(file)) continue
-        
-        // sequential upload
-        const formData = new FormData()
-        formData.append('image', file)
-        formData.append('title', file.name)
-        const response = await fetch('https://api.imgur.com/3/image', {
-          method: 'POST',
-          headers: {
-            Authorization: `Client-ID ${applicationConfig.imgurClientId}`,
-          },
-          body: formData,
-        })
-        if (response.ok) {
-          const result = await response.json()
-          const placeholder = `<!-- Uploading ${file.name} -->`
-          const matches = editor.getModel().findMatches(placeholder)
-          if (matches && matches.length > 0) {
-            const match = matches[0]
+
+        let url = await uploadImageToBackend(file, { articleId })
+        if (!url) {
+          url = await uploadImageToImgur(file)
+        }
+
+        const placeholder = `<!-- Uploading ${file.name} -->`
+        const matches = editor.getModel().findMatches(placeholder)
+        if (matches && matches.length > 0) {
+          const match = matches[0]
+          if (url) {
             editor.executeEdits('replace-uploading-placeholder', [
               {
                 range: match.range,
-                text: `![](${result.data.link})`,
+                text: `![](${url})`,
                 forceMoveMarkers: true,
               },
             ])
+          } else {
+            editor.executeEdits('remove-uploading-placeholder', [
+              {
+                range: match.range,
+                text: `<!-- Upload failed: ${file.name} -->`,
+                forceMoveMarkers: true,
+              },
+            ])
+            console.error(
+              `Unable to upload image ${file.name}: neither backend nor Imgur succeeded`
+            )
           }
-        } else {
-          let responseBody = ''
-          try {
-            responseBody = JSON.stringify(await response.json())
-          } catch {
-            // ignore
-            console.warn('Unable to parse response body as JSON')
-          }
-          console.error(
-            `Error while uploading file: ${file.name} - {status: ${response.status}, body: ${responseBody}}`
-          )
         }
       }
     } catch (error) {

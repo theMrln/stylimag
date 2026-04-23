@@ -6,6 +6,10 @@ import slugify from 'slugify'
 
 import { applicationConfig } from '../../../config.js'
 import useStyloExport from '../../../hooks/stylo-export.js'
+import {
+  inferExportFormat,
+  persistExportFromUrl,
+} from '../../../helpers/exportPersistence.js'
 import { Button, Select } from '../../atoms/index.js'
 import { Combobox, Loading } from '../../molecules/index.js'
 
@@ -75,6 +79,36 @@ export default function Export({
       articleId ?? bookId
     }/${exportId}/?with_toc=${with_toc}&with_nocite=${with_nocite}&with_link_citations=${link_citations}&with_ascii=0&bibliography_style=${bibliography_style}&formats=originals&formats=${formats}&version=${articleVersionId}`
   }, [with_toc, bibliography_style, formats, with_nocite, link_citations])
+
+  const handleExportClick = useCallback(() => {
+    if (articleId) {
+      const optionsHash = [
+        formats,
+        bibliography_style,
+        with_toc,
+        with_nocite,
+        link_citations,
+      ].join('|')
+      persistExportFromUrl({
+        url: exportUrl,
+        articleId,
+        versionId: articleVersionId || undefined,
+        format: inferExportFormat(formats),
+        optionsHash,
+      }).catch(() => {
+        /* fire-and-forget: download keeps working regardless */
+      })
+    }
+  }, [
+    articleId,
+    articleVersionId,
+    bibliography_style,
+    exportUrl,
+    formats,
+    link_citations,
+    with_nocite,
+    with_toc,
+  ])
 
   return (
     <>
@@ -186,6 +220,7 @@ export default function Export({
           rel="noreferrer noopener"
           target="_blank"
           role="button"
+          onClick={handleExportClick}
         >
           {t('export.submitForm.button')}
         </a>

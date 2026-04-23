@@ -43,5 +43,10 @@
   "volta": {
     "node": "24.12.0",
     "npm": "11.7.0"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.1036.0",
+    "@aws-sdk/s3-request-presigner": "^3.1036.0",
+    "multer": "^2.1.1"
   }
 }

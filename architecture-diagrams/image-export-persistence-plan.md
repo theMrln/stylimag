@@ -4,19 +4,19 @@ overview: Design and phase in durable storage for article images and generated e
 todos:
   - id: storage-abstraction
     content: Add backend storage adapter/config for S3-compatible image and export persistence
-    status: pending
+    status: completed
   - id: asset-flow
     content: Implement asset upload + retrieval APIs and switch frontend drop handler to use them
-    status: pending
+    status: completed
   - id: export-artifacts
     content: Persist generated HTML/PDF outputs and track metadata in Mongo
-    status: pending
+    status: in_progress
   - id: docker-dev-storage
     content: Add MinIO local service and environment wiring for development
-    status: pending
+    status: completed
   - id: docs-and-migration
     content: Document persistence and rollout strategy, including compatibility with existing external image links
-    status: pending
+    status: completed
 isProject: false
 ---
 

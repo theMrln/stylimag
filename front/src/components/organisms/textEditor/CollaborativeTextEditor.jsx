@@ -200,6 +200,7 @@ export default function CollaborativeTextEditor({
 
       editor.onDropIntoEditor(onDropIntoEditor(editor, {
         onMarkdownFile: handleMarkdownFile,
+        articleId,
       }))
 
       const contextMenu = editor.getContribution('editor.contrib.contextmenu')

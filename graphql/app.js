@@ -250,6 +250,13 @@ app.use(
 app.use('/nakala', proxy(config.get('nakala.apiUrl')))
 
 /*
+ * Asset storage (images, and later exports) backed by object storage.
+ * Routes require an authenticated user (session cookie or JWT Bearer).
+ */
+const { createAssetsRouter } = require('./routes/assets.js')
+app.use('/assets', populateUserFromJWT({ jwtSecret }), createAssetsRouter())
+
+/*
  * GraphQL interface
  */
 

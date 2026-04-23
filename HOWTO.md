@@ -150,9 +150,35 @@ Note: Mongo is referenced as upstream `mongo:6` in compose and is not built/push
 ## Docker persistence model
 
 - MongoDB data is persisted in the Docker named volume `mongo_data` (`mongo_data:/data/db`).
+- Object storage (MinIO) is persisted in the Docker named volume `minio_data` (`minio_data:/data`). It backs binary assets (images dropped into articles) and generated exports (HTML/PDF, stubbed for now).
 - OJS config is persisted on the host in `config/ojs.json`, mounted read-only into GraphQL (`./config:/usr/src/app/config:ro`).
-- Environment values are persisted on the host in `.env` (loaded via `env_file`).
+- Environment values are persisted on the host in `.env` (loaded via `env_file`). `STORAGE_*` variables control how GraphQL talks to the object store (endpoint, bucket, credentials).
 - `front` and `graphql` application files live in image layers; runtime writes inside containers are ephemeral unless explicitly mounted to a volume.
+
+### Object storage (images and exports)
+
+Images dropped into the Markdown editor are uploaded to the backend (`POST /assets/images`), persisted in MinIO (default bucket `stylimag-assets`), and referenced in Markdown via stable platform URLs served by GraphQL (`/assets/images/{id}`). If object storage is not configured and `SNOWPACK_IMGUR_CLIENT_ID` is set, the frontend falls back to Imgur.
+
+- The MinIO console is exposed locally on [`http://localhost:9001`](http://localhost:9001) (credentials: `STORAGE_ACCESS_KEY` / `STORAGE_SECRET_KEY`).
+- The bucket is created automatically on first upload if missing.
+- Generated export artifacts (HTML/PDF) are persisted via `POST /assets/exports` (multipart upload) and `POST /assets/exports/from-url` (backend fetches the pandoc-generated URL and stores it). When a user clicks *Export* in the frontend, the app triggers a `from-url` persistence call in addition to the direct download. Artifacts are tracked in the `ExportArtifact` Mongo model and retrievable via `GET /assets/exports/:id` (authenticated).
+
+### Compatibility and migrating external image links
+
+- Existing articles that reference external URLs (Imgur, etc.) keep rendering unchanged — no forced rewrite.
+- An opt-in script migrates external image references to platform assets:
+
+```bash
+cd graphql
+# dry-run (no writes)
+npm run migrate-images-to-assets:dry
+# actual run
+npm run migrate-images-to-assets
+# restrict to specific hosts or articles
+HOSTS=i.imgur.com,imgur.com ARTICLE_IDS=<id1>,<id2> npm run migrate-images-to-assets
+```
+
+The script downloads each image, uploads it to the object store, creates an `Asset` document, and replaces the external URL with `/assets/images/<id>` in `workingVersion.md`.
 
 ## Next steps
 
