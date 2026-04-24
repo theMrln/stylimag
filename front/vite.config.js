@@ -126,6 +126,14 @@ export default defineConfig(async ({ mode }) => {
         env.SNOWPACK_PUBLIC_PANDOC_EXPORT_ENDPOINT ??
           (isDevelopment ? 'http://127.0.0.1:3080' : '')
       ),
+      // Preview engine: 'auto' | 'lite' | 'export'.
+      // - auto (default): use export when the pandoc endpoint is usable,
+      //   fall back to the client-only "lite" renderer otherwise.
+      // - lite: always use the in-browser markdown-it renderer.
+      // - export: always require the pandoc export endpoint.
+      __PREVIEW_ENGINE__: JSON.stringify(
+        env.SNOWPACK_PUBLIC_PREVIEW_ENGINE ?? 'auto'
+      ),
       __IMGUR_CLIENT_ID__: JSON.stringify(env.SNOWPACK_IMGUR_CLIENT_ID),
     },
     server: {

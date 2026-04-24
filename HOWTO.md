@@ -52,6 +52,31 @@ docker compose up -d mongo minio graphql front pandoc-api export
 
 Optional overrides (examples): `STYLO_EXPORT_IMAGE`, `PANDOC_API_IMAGE`, `SE_PANDOC_API_BASE_URL`, `SE_ALLOWED_INSTANCE_BASE_URLS`, `SE_CANONICAL_BASE_URL`.
 
+### Lite (client-only) preview — run without the export stack
+
+The preview panel can render Markdown entirely in the browser using
+[markdown-it](https://github.com/markdown-it/markdown-it) + [DOMPurify](https://github.com/cure53/DOMPurify),
+so you can work with a minimal local stack (`mongo + minio + graphql + front`) and skip the `export` + `pandoc-api` containers.
+
+Selection is controlled by `SNOWPACK_PUBLIC_PREVIEW_ENGINE`:
+
+| Value    | Behaviour                                                                         |
+|----------|-----------------------------------------------------------------------------------|
+| `auto`   | Default. Use the pandoc export service when reachable, fall back to lite.         |
+| `lite`   | Always render client-side. No export endpoint required.                           |
+| `export` | Always require the pandoc export endpoint (`SNOWPACK_PUBLIC_PANDOC_EXPORT_ENDPOINT`). |
+
+On `auto`, users also get an in-app toggle in the preview toolbar to switch engines on demand (shown only when both are available).
+
+**What lite preview does not do** (on purpose):
+
+- No citeproc / BibTeX: `[@key]` stays literal.
+- No Pandoc filters or YAML-driven templates.
+- Footnotes render via a GitHub-style subset (markdown-it-footnote).
+- Output may differ from the exported article — the UI shows an "approximate preview" banner.
+
+For full fidelity (citations, filters, PDF), keep the export stack running locally or point `SNOWPACK_PUBLIC_PANDOC_EXPORT_ENDPOINT` at a hosted Stylo export URL.
+
 ### Run locally from prebuilt Docker Hub images (no local build)
 
 If you already have published app images on Docker Hub, run Stylo locally without rebuilding `graphql` and `front`:

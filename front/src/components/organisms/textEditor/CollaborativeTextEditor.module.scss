@@ -163,10 +163,26 @@
   background-color: $main-background-color;
   border: 1px solid $main-border-color;
   border-bottom: none;
+  align-items: center;
+  flex-wrap: wrap;
 
   button {
     display: flex;
     align-items: center;
     gap: 0.375rem;
+  }
+}
+
+.litePreviewNotice {
+  padding: 0.5rem 0.75rem;
+  background-color: #fff7ed; // soft amber
+  border: 1px solid #fed7aa;
+  border-bottom: none;
+  color: #7c2d12;
+  font-size: 0.875rem;
+  line-height: 1.4;
+
+  strong {
+    font-weight: 600;
   }
 }

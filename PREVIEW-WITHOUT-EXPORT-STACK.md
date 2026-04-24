@@ -4,10 +4,10 @@ Design note saved for later follow-up (after other cleanup). Covers why Stylo us
 
 ## Implementation checklist (when you pick an approach)
 
-- [ ] Choose preview strategy: **client lite (A)**, **GraphQL lite / Pandoc CLI (B)**, or **hosted export only (C)**
-- [ ] If implementing: add config flag and wire `useStyloExportPreview` / `CollaborativeTextEditor` to the selected engine
-- [ ] If **A**: add markdown + sanitize pipeline; reuse `previewMetadata` + CSS wrappers
-- [ ] If implementing: document fidelity limits vs export in HOWTO or editor help copy
+- [x] Choose preview strategy: **client lite (A)** implemented, with **hosted export (C)** retained as opt-in for fidelity
+- [x] Config flag (`SNOWPACK_PUBLIC_PREVIEW_ENGINE=auto|lite|export`) wired through `vite.config.js` → `applicationConfig.previewEngine`; `CollaborativeTextEditor` now dispatches between `useStyloExportPreview` and the new `useLitePreview`
+- [x] **A** pipeline in place: `markdown-it` + `markdown-it-footnote` + `DOMPurify` in `front/src/helpers/litePreview.js`; wraps into the same `previewMetadata` shell and existing `preview-imaginations.css`
+- [x] Fidelity limits documented in `HOWTO.md` (“Lite (client-only) preview”) and surfaced in the editor as a banner + engine toggle (`article.editor.previewLiteNotice*` / `previewEngine*` i18n keys)
 
 ---
 

@@ -9,6 +9,7 @@ export const applicationConfig = {
   graphqlEndpoint: __GRAPHQL_ENDPOINT__,
   pandocExportEndpoint: __PANDOC_EXPORT_ENDPOINT__,
   pandocExportHost: import.meta.env.SNOWPACK_PUBLIC_PANDOC_EXPORT_HOST ?? host,
+  previewEngine: __PREVIEW_ENGINE__,
   websocketEndpoint: toWebsocketEndpoint(__BACKEND_ENDPOINT__),
   imgurClientId: __IMGUR_CLIENT_ID__,
 }

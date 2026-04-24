@@ -10,7 +10,7 @@ import { applicationConfig } from '../config.js'
  * @param {string} endpoint
  * @returns {boolean}
  */
-function isPandocEndpointUsable(endpoint) {
+export function isPandocEndpointUsable(endpoint) {
   if (!endpoint || typeof endpoint !== 'string') {
     return false
   }
@@ -30,6 +30,22 @@ function isPandocEndpointUsable(endpoint) {
   } catch {
     return false
   }
+}
+
+/**
+ * Resolve which preview engine to use given the current build-time config
+ * and the runtime usability of the pandoc export endpoint. Returns `'lite'`
+ * or `'export'`; the `auto` setting falls back to `'lite'` whenever the
+ * export endpoint is not reachable (so a minimal mongo + graphql + front
+ * stack still gets a working preview).
+ * @returns {'lite' | 'export'}
+ */
+export function resolvePreviewEngine() {
+  const { previewEngine, pandocExportEndpoint } = applicationConfig
+  const endpointUsable = isPandocEndpointUsable(pandocExportEndpoint)
+  if (previewEngine === 'lite') return 'lite'
+  if (previewEngine === 'export') return 'export'
+  return endpointUsable ? 'export' : 'lite'
 }
 
 const fetcher = (url) => fetch(url).then((response) => response.json())

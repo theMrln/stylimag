@@ -41,6 +41,7 @@ export default [
         __BACKEND_ENDPOINT__: 'readonly',
         __GRAPHQL_ENDPOINT__: 'readonly',
         __PANDOC_EXPORT_ENDPOINT__: 'readonly',
+        __PREVIEW_ENGINE__: 'readonly',
         __IMGUR_CLIENT_ID__: 'readonly',
       },
     },

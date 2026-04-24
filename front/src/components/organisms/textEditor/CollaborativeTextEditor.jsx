@@ -21,7 +21,13 @@ import { useArticleVersion, useEditableArticle } from '../../../hooks/article.js
 import { useBibliographyCompletion } from '../../../hooks/bibliography.js'
 import { useCollaboration } from '../../../hooks/collaboration.js'
 import { useModal } from '../../../hooks/modal.js'
-import { useStyloExportPreview } from '../../../hooks/stylo-export.js'
+import {
+  isPandocEndpointUsable,
+  resolvePreviewEngine,
+  useStyloExportPreview,
+} from '../../../hooks/stylo-export.js'
+import { useLitePreview } from '../../../hooks/lite-preview.js'
+import { applicationConfig } from '../../../config.js'
 import { buildPreviewWithMetadataHeader } from '../../../helpers/previewMetadata.js'
 import defaultEditorOptions from '../monaco/options.js'
 import { onDropIntoEditor, importMarkdownContent, readFileAsText } from '../bibliography/support.js'
@@ -66,6 +72,14 @@ export default function CollaborativeTextEditor({
   const [pendingImportFile, setPendingImportFile] = useState(null)
   const fileInputRef = useRef(null)
   const [previewStyle, setPreviewStyle] = useState('imaginations') // 'imaginations' | 'standard'
+  const [previewEngine, setPreviewEngine] = useState(() =>
+    resolvePreviewEngine()
+  ) // 'lite' | 'export'
+  const exportEndpointAvailable = useMemo(
+    () => isPandocEndpointUsable(applicationConfig.pandocExportEndpoint),
+    []
+  )
+  const engineLocked = applicationConfig.previewEngine !== 'auto'
 
   const {
     version,
@@ -83,20 +97,48 @@ export default function CollaborativeTextEditor({
     versionId,
   })
 
-  const { html: __html, isLoading: isPreviewLoading } = useStyloExportPreview({
-    ...(mode === 'preview'
-      ? {
-          md_content: versionId ? version?.md : yText?.toString(),
-          yaml_content: versionId
-            ? version?.yaml
-            : article?.workingVersion?.yaml,
-          bib_content: versionId ? version?.bib : article?.workingVersion?.bib,
-        }
-      : {}),
-    with_toc: true,
-    with_nocite: true,
-    with_link_citations: true,
-  })
+  const isPreviewMode = mode === 'preview'
+  const previewMd = isPreviewMode
+    ? versionId
+      ? version?.md
+      : yText?.toString()
+    : undefined
+  const previewYaml = isPreviewMode
+    ? versionId
+      ? version?.yaml
+      : article?.workingVersion?.yaml
+    : undefined
+  const previewBib = isPreviewMode
+    ? versionId
+      ? version?.bib
+      : article?.workingVersion?.bib
+    : undefined
+
+  // Export engine: runs on the server and honors YAML / BibTeX.
+  // Only pass inputs when that engine is active so we don't trigger a SWR
+  // POST on every keystroke when the user has picked the lite renderer.
+  const { html: exportHtml, isLoading: isExportPreviewLoading } =
+    useStyloExportPreview({
+      ...(isPreviewMode && previewEngine === 'export'
+        ? {
+            md_content: previewMd,
+            yaml_content: previewYaml,
+            bib_content: previewBib,
+          }
+        : {}),
+      with_toc: true,
+      with_nocite: true,
+      with_link_citations: true,
+    })
+
+  // Lite engine: client-only markdown-it + DOMPurify. Synchronous.
+  const { html: liteHtml } = useLitePreview(
+    isPreviewMode && previewEngine === 'lite' ? { md_content: previewMd } : {}
+  )
+
+  const __html = previewEngine === 'lite' ? liteHtml : exportHtml
+  const isPreviewLoading =
+    previewEngine === 'export' ? isExportPreviewLoading : false
 
   const dispatch = useDispatch()
   const editorRef = useRef(null)
@@ -343,7 +385,7 @@ export default function CollaborativeTextEditor({
         </div>
       )}
 
-      {/* Preview style switch - shown when in preview mode */}
+      {/* Preview style and engine switches - shown when in preview mode */}
       {mode === 'preview' && (
         <div className={styles.editorToolbar}>
           <Toggle
@@ -358,6 +400,29 @@ export default function CollaborativeTextEditor({
               ? tCommon('article.editor.previewImaginations')
               : tCommon('article.editor.previewStandard')}
           </Toggle>
+          {/* Show the engine toggle only when both engines are available and
+              the admin hasn't forced a single engine via env. */}
+          {!engineLocked && exportEndpointAvailable && (
+            <Toggle
+              id="preview-engine-lite"
+              checked={previewEngine === 'lite'}
+              title={tCommon('article.editor.previewEngineToggleTitle')}
+              onChange={(checked) =>
+                setPreviewEngine(checked ? 'lite' : 'export')
+              }
+            >
+              {previewEngine === 'lite'
+                ? tCommon('article.editor.previewEngineLite')
+                : tCommon('article.editor.previewEngineExport')}
+            </Toggle>
+          )}
+        </div>
+      )}
+
+      {mode === 'preview' && previewEngine === 'lite' && (
+        <div className={styles.litePreviewNotice} role="note">
+          <strong>{tCommon('article.editor.previewLiteNoticeTitle')}</strong>{' '}
+          {tCommon('article.editor.previewLiteNoticeBody')}
         </div>
       )}
 
