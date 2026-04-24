@@ -38,7 +38,8 @@ services:
     environment:
       DATABASE_URL: mongodb://mongo:27017/stylo
       NODE_ENV: production
-      ALLOW_CORS_FRONTEND: "http://localhost:3000 http://127.0.0.1:3000 http://127.0.0.1:3030"
+      # Include :3080 so the export service (browser + server-side fetches) stays CORS-aligned with stylo-example.env
+      ALLOW_CORS_FRONTEND: "http://localhost:3000 http://127.0.0.1:3000 http://localhost:3080 http://127.0.0.1:3080 http://127.0.0.1:3030"
       STORAGE_ENDPOINT: ${STORAGE_ENDPOINT:-http://minio:9000}
       STORAGE_REGION: ${STORAGE_REGION:-us-east-1}
       STORAGE_BUCKET: ${STORAGE_BUCKET:-stylimag-assets}
@@ -58,6 +59,12 @@ services:
         # Same-origin URLs; nginx proxies API to graphql container (avoids CORS/cookies)
         SNOWPACK_PUBLIC_BACKEND_ENDPOINT: http://localhost:3000
         SNOWPACK_PUBLIC_GRAPHQL_ENDPOINT: http://localhost:3000/graphql
+        # Pandoc export service used for preview + export.
+        # Override in .env to point at an instance you control.
+        SNOWPACK_PUBLIC_PANDOC_EXPORT_ENDPOINT: ${SNOWPACK_PUBLIC_PANDOC_EXPORT_ENDPOINT:-http://127.0.0.1:3080}
+        SNOWPACK_PUBLIC_PANDOC_EXPORT_HOST: ${SNOWPACK_PUBLIC_PANDOC_EXPORT_HOST:-}
+        SNOWPACK_PUBLIC_ANNOTATIONS_CANONICAL_BASE_URL: ${SNOWPACK_PUBLIC_ANNOTATIONS_CANONICAL_BASE_URL:-http://localhost:3060}
+        SNOWPACK_IMGUR_CLIENT_ID: ${SNOWPACK_IMGUR_CLIENT_ID:-}
     container_name: stylo-front
     restart: unless-stopped
     depends_on:
@@ -66,6 +73,34 @@ services:
       NODE_ENV: production
     ports:
       - "3000:80"
+
+  # Official Stylo export stack (upstream: docker-compose / infrastructure/templates/docker-compose.yaml).
+  # Publishes Stylo’s HTTP API on host :3080 (container listens on 8001). Requires pandoc-api on the same network.
+  pandoc-api:
+    image: ${PANDOC_API_IMAGE:-davidbgk/pandoc-api:3.3.0}
+    container_name: stylo-pandoc-api
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3090:8000"
+
+  export:
+    image: ${STYLO_EXPORT_IMAGE:-davidbgk/stylo-export:3.6.3}
+    container_name: stylo-export
+    restart: unless-stopped
+    depends_on:
+      - pandoc-api
+    env_file:
+      - .env
+    environment:
+      SE_IMAGES_TIMEOUT: ${SE_IMAGES_TIMEOUT:-10}
+      SE_PANDOC_API_BASE_URL: ${SE_PANDOC_API_BASE_URL:-http://pandoc-api:8000/latest/}
+      # graphql = compose DNS name (in-stack); host.docker.internal = GraphQL on the host (hybrid dev)
+      SE_ALLOWED_INSTANCE_BASE_URLS: ${SE_ALLOWED_INSTANCE_BASE_URLS:-http://localhost:3000 http://127.0.0.1:3000 http://graphql:3030 http://host.docker.internal:3030}
+      SE_CANONICAL_BASE_URL: ${SE_CANONICAL_BASE_URL:-http://localhost:3000}
+    ports:
+      - "127.0.0.1:3080:8001"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
 volumes:
   mongo_data:

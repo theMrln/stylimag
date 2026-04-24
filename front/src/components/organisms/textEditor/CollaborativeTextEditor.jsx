@@ -86,11 +86,11 @@ export default function CollaborativeTextEditor({
   const { html: __html, isLoading: isPreviewLoading } = useStyloExportPreview({
     ...(mode === 'preview'
       ? {
-          md_content: versionId ? version.md : yText?.toString(),
+          md_content: versionId ? version?.md : yText?.toString(),
           yaml_content: versionId
-            ? version.yaml
+            ? version?.yaml
             : article?.workingVersion?.yaml,
-          bib_content: versionId ? version.bib : article?.workingVersion?.bib,
+          bib_content: versionId ? version?.bib : article?.workingVersion?.bib,
         }
       : {}),
     with_toc: true,

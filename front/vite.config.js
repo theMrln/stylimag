@@ -123,7 +123,8 @@ export default defineConfig(async ({ mode }) => {
         env.SNOWPACK_PUBLIC_GRAPHQL_ENDPOINT
       ),
       __PANDOC_EXPORT_ENDPOINT__: JSON.stringify(
-        env.SNOWPACK_PUBLIC_PANDOC_EXPORT_ENDPOINT
+        env.SNOWPACK_PUBLIC_PANDOC_EXPORT_ENDPOINT ??
+          (isDevelopment ? 'http://127.0.0.1:3080' : '')
       ),
       __IMGUR_CLIENT_ID__: JSON.stringify(env.SNOWPACK_IMGUR_CLIENT_ID),
     },

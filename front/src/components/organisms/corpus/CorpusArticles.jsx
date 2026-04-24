@@ -40,9 +40,11 @@ export default function CorpusArticles({ corpusId }) {
       if (sectA !== sectB) {
         return String(sectA).localeCompare(String(sectB))
       }
-      const seqA = a.seq ?? a.order ?? 0
-      const seqB = b.seq ?? b.order ?? 0
-      return seqA - seqB
+      // Manual reorder (`order`) takes precedence over the OJS sequence
+      // (`seq`), so drag-and-drop actually sticks for OJS-imported corpora.
+      const keyA = a.order ?? a.seq ?? 0
+      const keyB = b.order ?? b.seq ?? 0
+      return keyA - keyB
     })
   }, [data])
 

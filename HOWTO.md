@@ -33,6 +33,25 @@ This gives your access to:
 - Export endpoint: http://localhost:3080
 - Pandoc API: http://localhost:3090
 
+### Export + Pandoc API (preview and “Exporter”)
+
+The frontend calls **Stylo’s export HTTP API** on **`http://127.0.0.1:3080`** (see `SNOWPACK_PUBLIC_PANDOC_EXPORT_ENDPOINT` in `stylo-example.env` and the `front` build args in `docker-compose.yml`). That API is **not** the generic “Pandoc HTTP” service on port 8000; upstream runs two images:
+
+| Service       | Image (default)              | Host port | In-container port | Role |
+|---------------|------------------------------|-----------|-------------------|------|
+| `export`      | `davidbgk/stylo-export:3.6.3` | **3080**  | 8001              | Stylo `/api/*` preview + export |
+| `pandoc-api`  | `davidbgk/pandoc-api:3.3.0`   | **3090**  | 8000              | Pandoc conversion used by `export` |
+
+Wiring matches **`docker-compose.old.yaml`** / **`infrastructure/templates/docker-compose.yaml`**: `export` talks to Pandoc via **`SE_PANDOC_API_BASE_URL`** (default `http://pandoc-api:8000/latest/`), and only fetches instance URLs allowed by **`SE_ALLOWED_INSTANCE_BASE_URLS`**. Set **`SE_GRAPHQL_TOKEN`** in `.env` before first use (see [README](./README.md) — `generate-service-token`).
+
+Start the stack including export:
+
+```bash
+docker compose up -d mongo minio graphql front pandoc-api export
+```
+
+Optional overrides (examples): `STYLO_EXPORT_IMAGE`, `PANDOC_API_IMAGE`, `SE_PANDOC_API_BASE_URL`, `SE_ALLOWED_INSTANCE_BASE_URLS`, `SE_CANONICAL_BASE_URL`.
+
 ### Run locally from prebuilt Docker Hub images (no local build)
 
 If you already have published app images on Docker Hub, run Stylo locally without rebuilding `graphql` and `front`:

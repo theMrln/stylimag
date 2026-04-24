@@ -323,14 +323,18 @@ module.exports = {
 
     async updateArticlesOrder(corpus, { articlesOrderInput }) {
       const articlesOrderMap = articlesOrderInput.reduce((acc, item) => {
-        acc[item.articleId] = item.order
+        acc[String(item.articleId)] = item.order
         return acc
       }, {})
+      // `corpusArticle.article` is typically a bare ObjectId (not populated),
+      // but can also be a populated document. Normalise to the string id.
       corpus.articles = corpus.articles.map((corpusArticle) => {
-        const order = articlesOrderMap[corpusArticle.article._id]
+        const rawId = corpusArticle.article?._id ?? corpusArticle.article
+        const key = rawId ? String(rawId) : ''
+        const nextOrder = articlesOrderMap[key]
         return {
           article: corpusArticle.article,
-          order,
+          order: nextOrder !== undefined ? nextOrder : corpusArticle.order,
           section: corpusArticle.section,
           sectionTitle: corpusArticle.sectionTitle,
           seq: corpusArticle.seq,
