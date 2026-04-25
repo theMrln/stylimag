@@ -126,7 +126,7 @@ export default function CollaborativeTextEditor({
             bib_content: previewBib,
           }
         : {}),
-      with_toc: true,
+      with_toc: false,
       with_nocite: true,
       with_link_citations: true,
     })
@@ -200,15 +200,19 @@ export default function CollaborativeTextEditor({
   // Handle import confirmation from modal
   const handleImportConfirm = useCallback(async (mode) => {
     if (!pendingImportFile || !editorRef.current) return
-    
+
+    // Close the modal BEFORE applying edits: while the dialog is open the rest
+    // of the document is inert, which would block focus from returning to the
+    // editor and silently break a follow-up `editor.focus()` / cursor move.
+    const file = pendingImportFile
+    setPendingImportFile(null)
+    importModal.close()
+
     try {
-      const content = await readFileAsText(pendingImportFile)
+      const content = await readFileAsText(file)
       importMarkdownContent(editorRef.current, content, mode)
     } catch (error) {
       console.error('Failed to import markdown file:', error)
-    } finally {
-      setPendingImportFile(null)
-      importModal.close()
     }
   }, [pendingImportFile, importModal])
 

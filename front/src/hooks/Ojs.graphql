@@ -29,3 +29,17 @@ mutation importCorpusFromOJS(
     ...basicCorpusFields
   }
 }
+
+mutation pushArticleMetadataToOJS(
+  $articleId: ID!
+  $instance: OjsInstance
+) {
+  pushArticleMetadataToOJS(articleId: $articleId, instance: $instance)
+}
+
+mutation pushCorpusArticleOrderToOJS(
+  $corpusId: ID!
+  $instance: OjsInstance
+) {
+  pushCorpusArticleOrderToOJS(corpusId: $corpusId, instance: $instance)
+}

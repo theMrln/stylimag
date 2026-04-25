@@ -22,14 +22,20 @@ function isImageFile(file) {
 }
 
 /**
- * Import markdown content into the editor
+ * Import markdown content into the editor.
+ * Uses `executeEdits` for both modes — `trigger('keyboard', 'type', …)` needs
+ * the editor to be focused, which doesn't hold while the import modal is
+ * still open (the surrounding document is inert).
+ *
  * @param {import('monaco-editor').editor.IStandaloneCodeEditor} editor
  * @param {string} content
  * @param {'replace' | 'insert'} mode
  */
 export function importMarkdownContent(editor, content, mode) {
+  const model = editor.getModel()
+  if (!model) return
+
   if (mode === 'replace') {
-    const model = editor.getModel()
     const fullRange = model.getFullModelRange()
     editor.executeEdits('import-markdown', [
       {
@@ -40,9 +46,16 @@ export function importMarkdownContent(editor, content, mode) {
     ])
     editor.setPosition({ lineNumber: 1, column: 1 })
   } else {
-    // Insert at cursor position
-    editor.trigger('keyboard', 'type', { text: content })
+    const selection = editor.getSelection() ?? new vscode.Range(1, 1, 1, 1)
+    editor.executeEdits('import-markdown', [
+      {
+        range: selection,
+        text: content,
+        forceMoveMarkers: true,
+      },
+    ])
   }
+  editor.focus()
 }
 
 /**

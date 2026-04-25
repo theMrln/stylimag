@@ -14,7 +14,12 @@ import { updateArticlesOrder } from '../../../hooks/Corpus.graphql'
 
 import styles from './CorpusArticleItems.module.scss'
 
-export default function CorpusArticleItems({ corpusId, articles, onUpdate }) {
+export default function CorpusArticleItems({
+  corpusId,
+  articles,
+  onUpdate,
+  flushOrderRef,
+}) {
   const { t } = useTranslation('corpus', { useSuspense: false })
   const [isLoading, setLoading] = useState(true)
   const [articleCards, setArticleCards] = useState([])
@@ -55,6 +60,16 @@ export default function CorpusArticleItems({ corpusId, articles, onUpdate }) {
     ),
     []
   )
+
+  // Expose a flush so callers (e.g. the "Push order to OJS" button) can
+  // commit any pending debounced reorder before triggering the push.
+  useEffect(() => {
+    if (!flushOrderRef) return
+    flushOrderRef.current = () => updateArticleOrder.flush()
+    return () => {
+      if (flushOrderRef.current) flushOrderRef.current = null
+    }
+  }, [flushOrderRef, updateArticleOrder])
   const moveArticleCard = useCallback((dragIndex, hoverIndex) => {
     setArticleCards((prevCards) => {
       const length = prevCards.length
@@ -125,4 +140,6 @@ export default function CorpusArticleItems({ corpusId, articles, onUpdate }) {
 CorpusArticleItems.propTypes = {
   corpusId: PropTypes.string,
   articles: PropTypes.array,
+  onUpdate: PropTypes.func,
+  flushOrderRef: PropTypes.shape({ current: PropTypes.any }),
 }

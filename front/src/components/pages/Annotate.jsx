@@ -143,7 +143,7 @@ export default function Annotate({ strategy: strategyId }) {
 
   const { html: __html, isLoading: isPreviewLoading } = useStyloExportPreview({
     ...strategy.mapContent(data),
-    with_toc: true,
+    with_toc: false,
     with_nocite: true,
     with_link_citations: true,
   })

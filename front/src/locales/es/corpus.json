@@ -65,6 +65,15 @@
         "toggle": "Activar modo YAML"
       }
     },
+    "pushOrderToOjs": {
+      "label": "Enviar orden a OJS",
+      "pending": "Enviando orden…",
+      "title": "Enviar el orden actual de los artículos de cada sección a OJS",
+      "success_one": "Se envió el orden para {{count}} artículo OJS.",
+      "success_other": "Se envió el orden para {{count}} artículos OJS.",
+      "success_zero": "No hay artículos OJS para actualizar.",
+      "error": "Imposible enviar el orden de los artículos a OJS: {{errorMessage}}"
+    },
     "reorderArticles": {
       "error": "Imposible actualizar el orden de los artículos: {{errorMessage}}",
       "success": "El orden de los artículos se ha modificado con éxito."

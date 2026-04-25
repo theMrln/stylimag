@@ -20,7 +20,8 @@
     "start:front": "./front/node_modules/.bin/vite build ./front",
     "start:graphql": "node --watch ./graphql/app.js",
     "lint": "prettier --check front graphql ",
-    "lint:fix": "prettier --write front graphql"
+    "lint:fix": "prettier --write front graphql",
+    "schema:print": "cd graphql && node -e \"const{lexicographicSortSchema,printSchema}=require('graphql');const s=require('./schema');process.stdout.write('# This file was generated. Do not edit manually.\\n\\n'+printSchema(lexicographicSortSchema(s))+'\\n');\" > ../schema.graphql"
   },
   "repository": {
     "type": "git",

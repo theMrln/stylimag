@@ -68,13 +68,19 @@ export default function ArticleMetadata({ articleId, versionId }) {
 
   const handleYamlChange = useCallback(async (yaml) => {
     try {
-      const [metadata = {}] = YAML.loadAll(yaml)
+      const [parsedMetadata = {}] = YAML.loadAll(yaml)
       setError('')
-      await updateMetadata(metadata)
+      // The raw YAML view hides the OJS reference blob; preserve it across edits
+      // so re-import / push-to-OJS keeps working.
+      const merged =
+        metadata && metadata.ojs
+          ? { ...parsedMetadata, ojs: metadata.ojs }
+          : parsedMetadata
+      await updateMetadata(merged)
     } catch (err) {
       setError(err.message)
     }
-  }, [])
+  }, [metadata, updateMetadata])
 
   if (isLoading) {
     return <Loading />
@@ -123,6 +129,7 @@ export default function ArticleMetadata({ articleId, versionId }) {
       )}
       {selector !== 'raw' && (
         <ArticleEditorMetadataForm
+          articleId={articleId}
           readOnly={readOnly}
           metadata={metadata}
           metadataFormType={metadataFormType}

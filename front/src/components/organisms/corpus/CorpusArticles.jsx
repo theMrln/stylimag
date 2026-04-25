@@ -1,10 +1,13 @@
-import { useCallback, useMemo } from 'react'
+import { Upload } from 'lucide-react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import { DndProvider } from 'react-dnd'
 import { useTranslation } from 'react-i18next'
+import { toast } from 'react-toastify'
 
 import { dragAndDropManager } from '../../../hooks/dnd.js'
 import useFetchData from '../../../hooks/graphql.js'
 import { useModal } from '../../../hooks/modal.js'
+import { usePushCorpusArticleOrderToOJS } from '../../../hooks/ojs.js'
 import { Button } from '../../atoms/index.js'
 import { Loading } from '../../molecules/index.js'
 
@@ -52,6 +55,40 @@ export default function CorpusArticles({ corpusId }) {
     mutate()
   }, [mutate])
 
+  const ojsInstance = data?.corpus?.[0]?.metadata?.ojs?._instance ?? null
+  const showPushOrder = !!ojsInstance && corpusArticles.length > 0
+
+  const flushOrderRef = useRef(null)
+  const { pushOrder } = usePushCorpusArticleOrderToOJS()
+  const [isPushing, setIsPushing] = useState(false)
+
+  const handlePushOrder = useCallback(async () => {
+    if (isPushing) return
+    setIsPushing(true)
+    try {
+      // Commit any debounced reorder before pushing so OJS sees the latest
+      // sequence the user just dragged into place.
+      const pending = flushOrderRef.current?.()
+      if (pending && typeof pending.then === 'function') {
+        await pending
+      }
+      const updated = await pushOrder(corpusId)
+      toast(t('actions.pushOrderToOjs.success', { count: updated ?? 0 }), {
+        type: 'info',
+      })
+      mutate()
+    } catch (err) {
+      toast(
+        t('actions.pushOrderToOjs.error', {
+          errorMessage: err?.message ?? String(err),
+        }),
+        { type: 'error' }
+      )
+    } finally {
+      setIsPushing(false)
+    }
+  }, [corpusId, isPushing, mutate, pushOrder, t])
+
   return (
     <section className={styles.container}>
       <div className={styles.header}>
@@ -61,6 +98,19 @@ export default function CorpusArticles({ corpusId }) {
         >
           {t('actions.addArticles.label')}
         </Button>
+        {showPushOrder && (
+          <Button
+            secondary
+            onClick={handlePushOrder}
+            disabled={isPushing}
+            title={t('actions.pushOrderToOjs.title')}
+          >
+            <Upload size={16} />
+            {isPushing
+              ? t('actions.pushOrderToOjs.pending')
+              : t('actions.pushOrderToOjs.label')}
+          </Button>
+        )}
       </div>
 
       {isLoading && <Loading />}
@@ -71,6 +121,7 @@ export default function CorpusArticles({ corpusId }) {
               corpusId={corpusId}
               articles={corpusArticles}
               onUpdate={handleUpdate}
+              flushOrderRef={flushOrderRef}
             />
           </DndProvider>
         </ul>

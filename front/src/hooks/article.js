@@ -366,7 +366,12 @@ export function useArticleMetadata({ articleId, versionId }) {
     ? data?.version?.metadataFormType
     : data?.article?.workingVersion?.metadataFormType
 
-  const metadataYaml = metadata ? toYaml(clean(metadata)) : emptyYaml
+  const metadataForYaml = metadata
+    ? Object.fromEntries(
+        Object.entries(metadata).filter(([k]) => k !== 'ojs')
+      )
+    : null
+  const metadataYaml = metadataForYaml ? toYaml(clean(metadataForYaml)) : emptyYaml
   return {
     metadata,
     metadataFormType,

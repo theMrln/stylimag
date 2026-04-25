@@ -626,6 +626,21 @@ type Mutation {
   importCorpusFromOJS(issueId: Int!, workspaceId: ID, instance: OjsInstance!): Corpus
 
   """
+  Push the article's metadata side-panel fields back to OJS as a publication update.
+  The OJS instance, submission ID and publication ID are read from the article's
+  stored metadata.ojs reference (recorded at import time).
+  """
+  pushArticleMetadataToOJS(articleId: ID!, instance: OjsInstance): Boolean
+
+  """
+  Push the current article order within each section back to OJS as publication
+  \`seq\` updates. Each article keeps its OJS publication; only the seq number
+  changes to match the corpus-page reorder. Returns the number of publications
+  that were updated.
+  """
+  pushCorpusArticleOrderToOJS(corpusId: ID!, instance: OjsInstance): Int
+
+  """
   Retrieve an article by ID to perform mutations on it.
   Returns an error if the article does not exist or cannot be accessed.
   """

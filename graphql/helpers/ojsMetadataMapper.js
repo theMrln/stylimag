@@ -89,9 +89,10 @@ function deriveShortAuthor(authors) {
  *
  * @param {object} submission - OJS submission object (may include publications[0])
  * @param {object} issueMetadata - OJS issue metadata (optional)
+ * @param {string} [instance] - OJS instance name (staging/production); stored in metadata.ojs._instance for push-back
  * @returns {object} Metadata in OJS shape: locale, title (localized), authors (localized), abstract (localized), issue, start_page, short_title, short_author
  */
-function mapOjsToOjsMetadata(submission, issueMetadata = null) {
+function mapOjsToOjsMetadata(submission, issueMetadata = null, instance = null) {
   const publication = submission?.publications?.[0]
   const locale = publication?.locale || submission?.locale || 'en_US'
   const localeShort = mapLocale(locale)
@@ -129,8 +130,11 @@ function mapOjsToOjsMetadata(submission, issueMetadata = null) {
     short_author: shortAuthor || undefined,
   }
 
-  // Keep original OJS submission for re-import
-  metadata.ojs = submission
+  // Keep original OJS submission for re-import / push-back. Record the
+  // instance so we know which OJS API to talk to when pushing edits back.
+  metadata.ojs = instance
+    ? { ...submission, _instance: instance }
+    : submission
 
   return metadata
 }
@@ -169,9 +173,10 @@ function extractLocalizedText(obj, fallback = '') {
  * Keeps ojs reference for re-import. No legacy Stylo structures.
  *
  * @param {object} issueMetadata - OJS issue from GET /issues/:id
+ * @param {string} [instance] - OJS instance name (staging/production); stored in metadata.ojs._instance for push-back
  * @returns {object} Metadata for corpus type "journal"
  */
-function mapOjsIssueToCorpusMetadata(issueMetadata) {
+function mapOjsIssueToCorpusMetadata(issueMetadata, instance = null) {
   if (!issueMetadata || typeof issueMetadata !== 'object') {
     return {
       type: 'journal',
@@ -192,8 +197,32 @@ function mapOjsIssueToCorpusMetadata(issueMetadata) {
       ...(identifier && { identifier }),
       ...(issueNumber && { number: issueNumber }),
     },
-    ojs: issueMetadata,
+    ojs: instance ? { ...issueMetadata, _instance: instance } : issueMetadata,
   }
+}
+
+/**
+ * Build a partial OJS publication update body from side-panel-shaped metadata.
+ * Only fields that map cleanly to a publication PUT are included; fields like
+ * `issue`, `short_title`, `short_author` have no direct OJS counterpart and
+ * are ignored here.
+ *
+ * @param {object} metadata - OJS-shaped metadata as edited in the side panel
+ * @returns {object} body for PUT /submissions/:s/publications/:p
+ */
+function mapMetadataToPublicationUpdate(metadata) {
+  if (!metadata || typeof metadata !== 'object') return {}
+  const body = {}
+  if (metadata.title && typeof metadata.title === 'object') {
+    body.title = metadata.title
+  }
+  if (metadata.abstract && typeof metadata.abstract === 'object') {
+    body.abstract = metadata.abstract
+  }
+  if (metadata.start_page != null) {
+    body.pages = String(metadata.start_page)
+  }
+  return body
 }
 
 module.exports = {
@@ -202,6 +231,7 @@ module.exports = {
   mapOjsToOjsMetadata,
   mapOjsToStyloMetadata: mapOjsToOjsMetadata,
   mapOjsIssueToCorpusMetadata,
+  mapMetadataToPublicationUpdate,
   extractArticleTitle,
   toLocalizedObject,
   mapAuthorsToOjsShape,

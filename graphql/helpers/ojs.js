@@ -100,6 +100,95 @@ async function getOjsPublication(instance, submissionId, publicationId) {
 }
 
 /**
+ * Update an OJS publication with a partial body (PUT).
+ * OJS 3.x: PUT /submissions/:submissionId/publications/:publicationId
+ * @param {'staging'|'production'} instance
+ * @param {number|string} submissionId
+ * @param {number|string} publicationId
+ * @param {object} body - Fields to update on the publication
+ */
+async function updateOjsPublication(instance, submissionId, publicationId, body) {
+  return fetchOjs(
+    instance,
+    `/submissions/${submissionId}/publications/${publicationId}`,
+    {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    }
+  )
+}
+
+/**
+ * List authors attached to a publication.
+ * OJS 3.x: GET /submissions/:submissionId/publications/:publicationId/authors
+ * Returns authors sorted by `seq` ascending so order matches the OJS UI.
+ * @param {'staging'|'production'} instance
+ * @param {number|string} submissionId
+ * @param {number|string} publicationId
+ * @returns {Promise<object[]>}
+ */
+async function getOjsPublicationAuthors(instance, submissionId, publicationId) {
+  // OJS uses paginated `items`; request a generous count to avoid pagination.
+  const data = await fetchOjs(
+    instance,
+    `/submissions/${submissionId}/publications/${publicationId}/authors?count=100`
+  )
+  const items = Array.isArray(data) ? data : data?.items || []
+  return [...items].sort((a, b) => (a.seq ?? 0) - (b.seq ?? 0))
+}
+
+/**
+ * Create an author on a publication.
+ * OJS 3.x: POST /submissions/:submissionId/publications/:publicationId/authors
+ */
+async function createOjsAuthor(instance, submissionId, publicationId, body) {
+  return fetchOjs(
+    instance,
+    `/submissions/${submissionId}/publications/${publicationId}/authors`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    }
+  )
+}
+
+/**
+ * Update an author on a publication.
+ * OJS 3.x: PUT /submissions/:submissionId/publications/:publicationId/authors/:authorId
+ */
+async function updateOjsAuthor(
+  instance,
+  submissionId,
+  publicationId,
+  authorId,
+  body
+) {
+  return fetchOjs(
+    instance,
+    `/submissions/${submissionId}/publications/${publicationId}/authors/${authorId}`,
+    {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    }
+  )
+}
+
+/**
+ * Delete an author from a publication.
+ * OJS 3.x: DELETE /submissions/:submissionId/publications/:publicationId/authors/:authorId
+ */
+async function deleteOjsAuthor(instance, submissionId, publicationId, authorId) {
+  return fetchOjs(
+    instance,
+    `/submissions/${submissionId}/publications/${publicationId}/authors/${authorId}`,
+    { method: 'DELETE' }
+  )
+}
+
+/**
  * Get section metadata by id (for section title when publication only has sectionId).
  * OJS 3.x may expose GET /sections/:sectionId. Returns null on 404 or error.
  * @param {'staging'|'production'} instance
@@ -181,5 +270,10 @@ module.exports = {
   getOjsSection,
   getOjsIssueSubmissions,
   getSubmissionWithFullPublication,
+  updateOjsPublication,
+  getOjsPublicationAuthors,
+  createOjsAuthor,
+  updateOjsAuthor,
+  deleteOjsAuthor,
   getAvailableOjsInstances,
 }

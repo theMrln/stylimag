@@ -69,6 +69,15 @@
       "error": "Unable to update articles order: {{errorMessage}}",
       "success": "Articles order has been successfully modified."
     },
+    "pushOrderToOjs": {
+      "label": "Push order to OJS",
+      "pending": "Pushing order…",
+      "title": "Send the current article ordering for each section back to OJS",
+      "success_one": "Pushed order for {{count}} OJS article.",
+      "success_other": "Pushed order for {{count}} OJS articles.",
+      "success_zero": "No OJS articles to update.",
+      "error": "Unable to push article order to OJS: {{errorMessage}}"
+    },
     "update": {
       "error": "Unable to update the corpus: {{errMessage}}",
       "label": "Edit",
