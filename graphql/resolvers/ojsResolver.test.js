@@ -62,11 +62,13 @@ describe('ojs resolver', () => {
     const mockSubmissions = [
       {
         id: 999,
+        status: 3, // STATUS_PUBLISHED
         title: { en_US: 'Article 1' },
         abstract: { en_US: 'Abstract 1' },
       },
       {
         id: 1000,
+        status: 3,
         title: { en_US: 'Article 2' },
         abstract: { en_US: 'Abstract 2' },
       },
@@ -103,6 +105,264 @@ describe('ojs resolver', () => {
 
     metaMock.mock.restore()
     subMock.mock.restore()
+  })
+
+  test('import preserves issueMetadata.sections array order via sectionSeq', async () => {
+    // OJS' issueMetadata.sections array is returned in the per-issue
+    // custom section order (in OJS 3.5+, after the editor sets it via
+    // the issue management UI). The corpus must follow that array order,
+    // not section id, not section title.
+    const mockIssueMetadata = {
+      id: 321,
+      title: { en_US: 'Ordered Issue' },
+      description: { en_US: 'd' },
+      // Editor put Reviews first even though id 10 > id 5 and "Reviews"
+      // sorts after "Editorials" alphabetically. The corpus must follow.
+      sections: [
+        { id: 10, title: { en_US: 'Reviews' } },
+        { id: 5, title: { en_US: 'Editorials' } },
+      ],
+    }
+    const mockSubmissions = [
+      {
+        id: 1,
+        status: 3,
+        title: { en_US: 'Editorial B' },
+        publications: [{ id: 1, sectionId: 5, seq: 1 }],
+      },
+      {
+        id: 2,
+        status: 3,
+        title: { en_US: 'Review B' },
+        publications: [{ id: 2, sectionId: 10, seq: 1 }],
+      },
+      {
+        id: 3,
+        status: 3,
+        title: { en_US: 'Editorial A' },
+        publications: [{ id: 3, sectionId: 5, seq: 0 }],
+      },
+      {
+        id: 4,
+        status: 3,
+        title: { en_US: 'Review A' },
+        publications: [{ id: 4, sectionId: 10, seq: 0 }],
+      },
+    ]
+    const sectionMetaById = {
+      10: { id: 10, title: { en_US: 'Reviews' } },
+      5: { id: 5, title: { en_US: 'Editorials' } },
+    }
+
+    const metaMock = mock.method(
+      ojsHelper,
+      'getOjsIssueMetadata',
+      async () => mockIssueMetadata
+    )
+    const subMock = mock.method(
+      ojsHelper,
+      'getOjsIssueSubmissions',
+      async () => mockSubmissions
+    )
+    const fullPubMock = mock.method(
+      ojsHelper,
+      'getSubmissionWithFullPublication',
+      async (_instance, sub) => sub
+    )
+    const sectionMock = mock.method(
+      ojsHelper,
+      'getOjsSection',
+      async (_instance, sectionId) => sectionMetaById[sectionId] ?? null
+    )
+
+    const corpus = await OjsMutation.importCorpusFromOJS(
+      {},
+      { issueId: 321, workspaceId: workspace.id, instance: 'staging' },
+      { user }
+    )
+
+    // Sort the way the corpus page sorts: (sectionSeq, order ?? seq).
+    const sorted = [...corpus.articles].sort((a, b) => {
+      if (a.sectionSeq !== b.sectionSeq)
+        return (a.sectionSeq ?? 0) - (b.sectionSeq ?? 0)
+      const ka = a.order ?? a.seq ?? 0
+      const kb = b.order ?? b.seq ?? 0
+      return ka - kb
+    })
+    const titles = await Promise.all(
+      sorted.map(async (a) => {
+        const art = await require('../models/article').findById(a.article)
+        return art.title
+      })
+    )
+    // Reviews come first because they're index 0 in issueMetadata.sections,
+    // even though "Editorials" < "Reviews" alphabetically.
+    assert.deepEqual(titles, [
+      'Review A',
+      'Review B',
+      'Editorial A',
+      'Editorial B',
+    ])
+
+    metaMock.mock.restore()
+    subMock.mock.restore()
+    fullPubMock.mock.restore()
+    sectionMock.mock.restore()
+  })
+
+  test('import skips unpublished (queued) submissions', async () => {
+    // OJS' /issues/:id, when called with an editor token, returns ALL
+    // submissions assigned to the issue including drafts that readers
+    // never see. The corpus must mirror what readers see: published only.
+    // The queued draft also references a section (898) that is NOT in
+    // issueMetadata.sections, which used to leak as a phantom category
+    // sorting before the published sections.
+    const mockIssueMetadata = {
+      id: 999,
+      title: { en_US: 'Mixed-status Issue' },
+      description: { en_US: 'd' },
+      sections: [{ id: 1, title: { en_US: 'Articles' } }],
+    }
+    const mockSubmissions = [
+      {
+        id: 100,
+        status: 1, // STATUS_QUEUED — must be skipped
+        statusLabel: 'Queued',
+        title: { en_US: 'Phantom draft' },
+        publications: [{ id: 1, sectionId: 898, seq: 0 }],
+      },
+      {
+        id: 101,
+        status: 3,
+        title: { en_US: 'Real article' },
+        publications: [{ id: 2, sectionId: 1, seq: 0 }],
+      },
+    ]
+    const metaMock = mock.method(
+      ojsHelper,
+      'getOjsIssueMetadata',
+      async () => mockIssueMetadata
+    )
+    const subMock = mock.method(
+      ojsHelper,
+      'getOjsIssueSubmissions',
+      async () => mockSubmissions
+    )
+    const fullPubMock = mock.method(
+      ojsHelper,
+      'getSubmissionWithFullPublication',
+      async (_instance, sub) => sub
+    )
+    const sectionMock = mock.method(
+      ojsHelper,
+      'getOjsSection',
+      async () => ({ id: 1, title: { en_US: 'Articles' }, seq: 0 })
+    )
+
+    const corpus = await OjsMutation.importCorpusFromOJS(
+      {},
+      { issueId: 999, workspaceId: workspace.id, instance: 'staging' },
+      { user }
+    )
+
+    assert.equal(corpus.articles.length, 1)
+    assert.equal(
+      String(corpus.articles[0].section),
+      '1',
+      'phantom section 898 from the queued draft must not leak through'
+    )
+
+    metaMock.mock.restore()
+    subMock.mock.restore()
+    fullPubMock.mock.restore()
+    sectionMock.mock.restore()
+  })
+
+  test('import dedupes duplicate submissions, preferring currentPublicationId', async () => {
+    // Two entries in issue.articles share the same submission id (the
+    // editor staged a draft publication while the published one is still
+    // attached). The corpus must contain the submission exactly once, and
+    // the kept publication must be the one matching currentPublicationId.
+    const mockIssueMetadata = {
+      id: 654,
+      title: { en_US: 'Dedup Issue' },
+      description: { en_US: 'd' },
+    }
+    const mockSubmissions = [
+      // Draft publication of submission 42, listed first in the array.
+      {
+        id: 42,
+        status: 3,
+        title: { en_US: 'Same Article' },
+        currentPublicationId: 9999,
+        publications: [{ id: 1234, sectionId: 1, seq: 0 }],
+      },
+      // Published publication of submission 42 — this is the one to keep.
+      {
+        id: 42,
+        status: 3,
+        title: { en_US: 'Same Article' },
+        currentPublicationId: 9999,
+        publications: [{ id: 9999, sectionId: 1, seq: 0 }],
+      },
+      // Unrelated submission, should pass through.
+      {
+        id: 43,
+        status: 3,
+        title: { en_US: 'Other Article' },
+        publications: [{ id: 10000, sectionId: 1, seq: 1 }],
+      },
+    ]
+    const metaMock = mock.method(
+      ojsHelper,
+      'getOjsIssueMetadata',
+      async () => mockIssueMetadata
+    )
+    const subMock = mock.method(
+      ojsHelper,
+      'getOjsIssueSubmissions',
+      async () => mockSubmissions
+    )
+    const fullPubMock = mock.method(
+      ojsHelper,
+      'getSubmissionWithFullPublication',
+      async (_instance, sub) => sub
+    )
+    const sectionMock = mock.method(
+      ojsHelper,
+      'getOjsSection',
+      async () => ({ id: 1, title: { en_US: 'Articles' }, seq: 0 })
+    )
+
+    const corpus = await OjsMutation.importCorpusFromOJS(
+      {},
+      { issueId: 654, workspaceId: workspace.id, instance: 'staging' },
+      { user }
+    )
+
+    assert.equal(
+      corpus.articles.length,
+      2,
+      'duplicate of submission 42 was kept once'
+    )
+
+    // The kept publication for submission 42 must be the canonical
+    // currentPublicationId (9999), not the draft (1234) that came first
+    // in the issue.articles array.
+    const Article = require('../models/article')
+    const articleIds = corpus.articles.map((a) => a.article)
+    const articles = await Article.find({ _id: { $in: articleIds } })
+    const sameArticle = articles.find((a) => a.title === 'Same Article')
+    assert.equal(
+      sameArticle?.workingVersion?.metadata?.ojs?.publications?.[0]?.id,
+      9999,
+      'kept the canonical publication, not the draft'
+    )
+
+    metaMock.mock.restore()
+    subMock.mock.restore()
+    fullPubMock.mock.restore()
+    sectionMock.mock.restore()
   })
 
   test('import throws if not authenticated', async () => {

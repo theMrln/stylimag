@@ -11,7 +11,14 @@ const CorpusArticleSchema = new Schema({
   section: Schema.Types.Mixed,
   /** Section display title (e.g. from OJS section title). Optional. */
   sectionTitle: String,
-  /** Sequence within section (e.g. from OJS publication seq). Optional. */
+  /**
+   * Display sequence of the section itself (from OJS `/sections/:id` seq).
+   * The OJS issue endpoint returns submissions in creation order, not
+   * display order, so we record each section's own seq at import time
+   * and sort sections by it. Optional.
+   */
+  sectionSeq: Number,
+  /** Sequence within section (from OJS publication.seq). Optional. */
   seq: Number,
 })
 

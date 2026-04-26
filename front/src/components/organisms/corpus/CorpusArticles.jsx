@@ -37,14 +37,26 @@ export default function CorpusArticles({ corpusId }) {
   )
   const corpusArticles = useMemo(() => {
     const raw = data?.corpus?.[0]?.articles || []
+    // Section ordering: by `sectionSeq` captured at import time from
+    // OJS' issueMetadata.sections payload (the per-issue custom section
+    // order set by the editor). Within a section: `order` (set by
+    // drag-and-drop) wins over `seq` (publication.seq from OJS) so
+    // manual reorders persist.
+    //
+    // Legacy entries with no `sectionSeq` fall back to a stable
+    // section-id grouping so the page doesn't crash; they need to be
+    // re-imported to benefit from the per-issue order.
     return [...raw].sort((a, b) => {
-      const sectA = a.section ?? ''
-      const sectB = b.section ?? ''
-      if (sectA !== sectB) {
-        return String(sectA).localeCompare(String(sectB))
+      const ssA = a.sectionSeq
+      const ssB = b.sectionSeq
+      if (ssA != null && ssB != null && ssA !== ssB) return ssA - ssB
+      if (ssA != null && ssB == null) return -1
+      if (ssA == null && ssB != null) return 1
+      if (ssA == null && ssB == null) {
+        const sectA = a.section ?? ''
+        const sectB = b.section ?? ''
+        if (sectA !== sectB) return String(sectA).localeCompare(String(sectB))
       }
-      // Manual reorder (`order`) takes precedence over the OJS sequence
-      // (`seq`), so drag-and-drop actually sticks for OJS-imported corpora.
       const keyA = a.order ?? a.seq ?? 0
       const keyB = b.order ?? b.seq ?? 0
       return keyA - keyB

@@ -114,9 +114,12 @@
   text-transform: uppercase;
 }
 
+/* `text-align-last: left` on the body `p` rule otherwise wins on single-line
+   author paragraphs and visibly left-aligns them; reset both here. */
 .stylo-preview-imaginations .preview-metadata-header .author p {
   margin: 0.25rem 0;
   text-align: center;
+  text-align-last: center;
 }
 
 /* Abstract in header stays left-aligned for readability, override header center */
@@ -240,4 +243,40 @@
 .stylo-preview-imaginations .footnotes li {
   padding-left: 10px;
   text-indent: 0;
+}
+
+/* Pandoc bracketed-span: [T]{.dropcap} renders as <span class="dropcap">T</span>.
+   Float a large initial cap so the surrounding paragraph wraps around it. */
+.stylo-preview-imaginations .dropcap {
+  float: left;
+  margin: 0.05em 0.1em 0 0;
+  padding: 0;
+  color: #e9362c;
+  font-family: var(--sans-font);
+  font-weight: 500;
+  font-size: 3.5em;
+  line-height: 0.85;
+  text-transform: uppercase;
+}
+
+/* Pandoc fenced div: `::: ref` / `::: {.ref}` / `::: {.references}` becomes
+   <div class="ref">…</div> (or `.references`). Used for end-of-article
+   bibliographies: smaller text with hanging indent per entry. */
+.stylo-preview-imaginations .ref,
+.stylo-preview-imaginations .references {
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid #ddd;
+  font-size: 0.889rem;
+  font-family: var(--sans-font);
+}
+
+.stylo-preview-imaginations .ref p,
+.stylo-preview-imaginations .references p {
+  margin-bottom: 0.5rem;
+  padding-left: 1.5em;
+  text-indent: -1.5em;
+  text-align: left;
+  text-align-last: left;
+  hyphens: none;
 }

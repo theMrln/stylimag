@@ -237,6 +237,7 @@ module.exports = {
                 order: article.order,
                 section: article.section,
                 sectionTitle: article.sectionTitle,
+                sectionSeq: article.sectionSeq,
                 seq: article.seq,
                 article: articleLoaded,
               }
@@ -244,15 +245,27 @@ module.exports = {
             .filter((a) => a)
         )
       ).filter((a) => a)
+      // Sort by per-issue section order (`sectionSeq`, captured at OJS
+      // import from issueMetadata.sections), then by manual `order`
+      // (drag-and-drop) falling back to publication `seq`. Articles with
+      // no `sectionSeq` (legacy entries pre-dating the field) come last
+      // and group by stringified section id so the page is still stable.
       articles.sort((a, b) => {
-        const sectA = a.section ?? ''
-        const sectB = b.section ?? ''
-        if (sectA !== sectB) {
-          return String(sectA).localeCompare(String(sectB))
+        const ssA = a.sectionSeq
+        const ssB = b.sectionSeq
+        if (ssA != null && ssB != null && ssA !== ssB) return ssA - ssB
+        if (ssA != null && ssB == null) return -1
+        if (ssA == null && ssB != null) return 1
+        if (ssA == null && ssB == null) {
+          const sectA = a.section ?? ''
+          const sectB = b.section ?? ''
+          if (sectA !== sectB) {
+            return String(sectA).localeCompare(String(sectB))
+          }
         }
-        const seqA = a.seq ?? a.order ?? 0
-        const seqB = b.seq ?? b.order ?? 0
-        return seqA - seqB
+        const keyA = a.order ?? a.seq ?? 0
+        const keyB = b.order ?? b.seq ?? 0
+        return keyA - keyB
       })
       return articles
     },
@@ -337,6 +350,7 @@ module.exports = {
           order: nextOrder !== undefined ? nextOrder : corpusArticle.order,
           section: corpusArticle.section,
           sectionTitle: corpusArticle.sectionTitle,
+          sectionSeq: corpusArticle.sectionSeq,
           seq: corpusArticle.seq,
         }
       })

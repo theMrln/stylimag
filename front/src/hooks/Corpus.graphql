@@ -35,6 +35,7 @@ query getCorpus(
       order
       section
       sectionTitle
+      sectionSeq
       seq
       article {
         _id

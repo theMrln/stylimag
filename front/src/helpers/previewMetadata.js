@@ -22,10 +22,31 @@ function escapeHtml(text) {
     .replace(/'/g, '&#39;')
 }
 
+/**
+ * Extract just the `<article>...</article>` body from a full pandoc HTML
+ * response. The pandoc-export microservice returns a complete document
+ * (`<!DOCTYPE html>…<head>…</head><body>…</body></html>`) including a
+ * Schema.org / FOAF indexation `<header>` that surfaces a stray
+ * `<span property="name">untitled</span>` (because the upstream resolver
+ * defaults `title_f` to `"untitled"` when no flat title is set).
+ *
+ * For the in-app preview we only want the actual article markup, so we
+ * pull out the `<article>` content and drop everything else. Lite-engine
+ * HTML (no `<article>` wrapper) is returned unchanged.
+ *
+ * @param {string} html
+ * @returns {string}
+ */
+function extractArticleBody(html) {
+  if (!html || typeof html !== 'string') return html ?? ''
+  const match = html.match(/<article\b[^>]*>([\s\S]*?)<\/article>/i)
+  return match ? match[1] : html
+}
+
 /** Remove placeholder content from export body: "untitled", "Image Notes", etc. */
 function stripPreviewPlaceholders(html) {
   if (!html || typeof html !== 'string') return html
-  let out = html
+  let out = extractArticleBody(html)
   /* untitled: paragraphs, headings, strong, and divs containing only untitled */
   out = out
     .replace(/<p>\s*(\*\*untitled\*\*|untitled)\s*<\/p>/gi, '')

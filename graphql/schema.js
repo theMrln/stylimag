@@ -382,6 +382,7 @@ type CorpusArticle {
   order: Int
   section: String
   sectionTitle: String
+  sectionSeq: Int
   seq: Int
 
   # mutation

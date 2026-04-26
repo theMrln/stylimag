@@ -235,6 +235,9 @@ module.exports = {
         issueId
       )
 
+      logger.info(
+        `OJS issueMetadata top-level keys: ${Object.keys(issueMetadata || {}).join(', ')}`
+      )
       // Log first submission structure for debugging
       if (submissions.length > 0) {
         logger.info(
@@ -242,10 +245,139 @@ module.exports = {
         )
       }
 
-      // 4. Create Articles (each submission enriched with full publication for authors etc.)
-      let order = 0
-      const sectionTitleCache = new Map()
+      // Per-issue section order. OJS lets editors override the journal-wide
+      // section seq for an individual issue (custom_issue_orders table), so
+      // /sections/:id is wrong as a section-ordering source — it gives the
+      // journal-global seq, not the per-issue one.
+      //
+      // Preferred sources, in order:
+      //   1. issueMetadata.sections — newer OJS responses include the
+      //      per-issue section list with the right seq baked in.
+      //   2. First-appearance order in issue.articles. OJS pre-sorts the
+      //      `articles` array by (custom section order, publication.seq),
+      //      so the order in which a section's first article shows up
+      //      reproduces the editorial section order. Note that this uses
+      //      the *array* order, NOT submission-id/creation order — which
+      //      is what we were warned off of last round.
+      //   3. /sections/:id seq (journal-global) — last-resort fallback.
+      const issueSectionSeqById = new Map()
+      if (Array.isArray(issueMetadata?.sections)) {
+        // Dump the full sections array so we can audit the field shape if
+        // the per-issue order ever drifts from what readers see on OJS.
+        logger.info(
+          `OJS issueMetadata.sections (full): ${JSON.stringify(issueMetadata.sections)}`
+        )
+        // OJS exposes the section's display position as `sequence` (with
+        // gaps that reflect its position among ALL journal sections).
+        // Some OJS versions also carry `seq` (a compacted 1..N value).
+        // Either drives the right ordering; we prefer `sequence` because
+        // that's the semantic OJS field, and fall back to `seq`, then to
+        // the array index as a last resort.
+        for (let i = 0; i < issueMetadata.sections.length; i++) {
+          const s = issueMetadata.sections[i]
+          if (s?.id != null) {
+            const sortKey =
+              typeof s.sequence === 'number'
+                ? s.sequence
+                : typeof s.seq === 'number'
+                  ? s.seq
+                  : i
+            issueSectionSeqById.set(String(s.id), sortKey)
+          }
+        }
+        logger.info(
+          `OJS per-issue section sort keys (id → sectionSeq): ${JSON.stringify(
+            [...issueSectionSeqById.entries()]
+          )}`
+        )
+      }
+      const firstAppearanceSeqById = new Map()
+
+      // 4a. Skip unpublished submissions. OJS' /issues/:id endpoint, when
+      // called with an editor-level API token, returns ALL submissions
+      // assigned to the issue, including queued drafts (status=1) that
+      // readers never see on the public issue page. Importing those is
+      // what causes phantom sections (e.g. a draft tied to a section that
+      // isn't in issueMetadata.sections) and what looks like a "duplicate"
+      // article when a published submission has a parallel draft attached
+      // to the same issue. OJS' STATUS_PUBLISHED is 3.
+      const publishedSubmissions = []
       for (const submission of submissions) {
+        const status = submission?.status
+        if (status === 3) {
+          publishedSubmissions.push(submission)
+        } else {
+          logger.warn(
+            `OJS import: skipping unpublished submission ${submission?.id} (status=${status}, label=${submission?.statusLabel ?? 'unknown'}); only status=3 (Published) is imported`
+          )
+        }
+      }
+
+      // 4b. Dedupe submissions by submission id BEFORE creating articles.
+      // The issue.articles array can list multiple publications of the same
+      // submission (e.g. a draft alongside the published version when an
+      // editor never cleaned up the staged version). We keep the publication
+      // that matches the submission's `currentPublicationId` if present,
+      // otherwise the first one we see — and log both ids so you can find
+      // the rogue draft in OJS.
+      const seenSubmissionIds = new Map()
+      const dedupedSubmissions = []
+      for (const submission of publishedSubmissions) {
+        const subId =
+          submission?.id ??
+          submission?.submissionId ??
+          submission?.publications?.[0]?.submissionId
+        if (subId == null) {
+          dedupedSubmissions.push(submission)
+          continue
+        }
+        const key = String(subId)
+        // The publication id OF THIS entry — not the submission's canonical
+        // currentPublicationId, which we compare against separately to
+        // decide which duplicate to keep.
+        const incomingPubId = submission?.publications?.[0]?.id ?? null
+        const existing = seenSubmissionIds.get(key)
+        if (!existing) {
+          seenSubmissionIds.set(key, {
+            index: dedupedSubmissions.length,
+            submission,
+            publicationId: incomingPubId,
+          })
+          dedupedSubmissions.push(submission)
+          continue
+        }
+        // Duplicate: prefer the entry whose publicationId matches the
+        // submission's currentPublicationId (OJS' canonical published one).
+        const currentPubId = submission?.currentPublicationId ?? null
+        const incomingMatchesCurrent =
+          currentPubId != null && incomingPubId === currentPubId
+        const existingMatchesCurrent =
+          currentPubId != null && existing.publicationId === currentPubId
+        if (incomingMatchesCurrent && !existingMatchesCurrent) {
+          logger.warn(
+            `OJS import dedup: replacing duplicate of submission ${subId}: kept publication ${incomingPubId}, dropped ${existing.publicationId}`
+          )
+          dedupedSubmissions[existing.index] = submission
+          seenSubmissionIds.set(key, {
+            index: existing.index,
+            submission,
+            publicationId: incomingPubId,
+          })
+        } else {
+          logger.warn(
+            `OJS import dedup: skipping duplicate of submission ${subId}: kept publication ${existing.publicationId}, dropped ${incomingPubId}`
+          )
+        }
+      }
+
+      // 5. Create Articles (each submission enriched with full publication for authors etc.)
+      // We do NOT seed `order` here: that field is reserved for the user's
+      // manual drag-and-drop reorders. Initialising it from iteration index
+      // would shadow `seq` and re-introduce submission-order sorting.
+      // `seqFallback` is only used when a publication is missing seq.
+      let seqFallback = 0
+      const sectionMetaCache = new Map()
+      for (const submission of dedupedSubmissions) {
         const submissionWithPublication =
           await ojsHelper.getSubmissionWithFullPublication(instance, submission)
 
@@ -289,33 +421,63 @@ module.exports = {
           (typeof sectionObj === 'object' && sectionObj !== null
             ? sectionObj.id
             : sectionObj)
+
+        // Fetch the section once per id so we get both its title and its
+        // display seq. Either may already be present on the publication
+        // payload; only fall back to /sections/:id when something is missing.
+        let sectionMeta = null
+        if (section != null) {
+          const cacheKey = String(section)
+          if (!sectionMetaCache.has(cacheKey)) {
+            sectionMetaCache.set(
+              cacheKey,
+              await ojsHelper.getOjsSection(instance, section)
+            )
+          }
+          sectionMeta = sectionMetaCache.get(cacheKey)
+        }
+
         let sectionTitle =
           typeof sectionObj === 'object' && sectionObj?.title != null
             ? extractLocalizedText(sectionObj.title)
             : publication?.sectionTitle != null
               ? extractLocalizedText(publication.sectionTitle)
               : undefined
-        if (section != null && !sectionTitle?.trim()) {
-          const cacheKey = String(section)
-          if (!sectionTitleCache.has(cacheKey)) {
-            const sectionMeta = await ojsHelper.getOjsSection(instance, section)
-            const title = sectionMeta
-              ? (typeof sectionMeta.title === 'string'
-                  ? sectionMeta.title
-                  : extractLocalizedText(sectionMeta.title))
-              : ''
-            sectionTitleCache.set(cacheKey, title)
-          }
-          const cached = sectionTitleCache.get(cacheKey)
-          sectionTitle = cached?.trim() ? cached : undefined
+        if (!sectionTitle?.trim() && sectionMeta) {
+          sectionTitle =
+            typeof sectionMeta.title === 'string'
+              ? sectionMeta.title
+              : extractLocalizedText(sectionMeta.title)
         }
+
+        // Section display order: per-issue order, with fallbacks.
+        const sectionKey = section != null ? String(section) : ''
+        if (sectionKey && !firstAppearanceSeqById.has(sectionKey)) {
+          firstAppearanceSeqById.set(sectionKey, firstAppearanceSeqById.size)
+        }
+        const sectionSeq = sectionKey
+          ? issueSectionSeqById.has(sectionKey)
+            ? issueSectionSeqById.get(sectionKey)
+            : firstAppearanceSeqById.get(sectionKey)
+          : null
+
         const seq =
-          typeof publication?.seq === 'number' ? publication.seq : order
+          typeof publication?.seq === 'number'
+            ? publication.seq
+            : seqFallback++
+
+        // Prominently log the (submission, publication, section, title)
+        // tuple so duplicates and section-order issues are easy to chase
+        // from the logs and matched up to the UI.
+        logger.info(
+          `OJS import: corpus article submission=${submission?.id} publication=${publication?.id} title="${articleTitle ?? ''}" section=${section} sectionSeq=${sectionSeq} seq=${seq}`
+        )
+
         newCorpus.articles.push({
           article: newArticle,
-          order: order++,
           section: section != null ? section : undefined,
-          sectionTitle: sectionTitle || undefined,
+          sectionTitle: sectionTitle?.trim() ? sectionTitle : undefined,
+          sectionSeq: sectionSeq != null ? sectionSeq : undefined,
           seq,
         })
 
@@ -421,13 +583,21 @@ module.exports = {
       const corpusInstance = corpus.metadata?.ojs?._instance ?? null
       const fallbackInstance = instance ?? corpusInstance
 
-      // Sort the corpus articles using the same key as the corpus page so the
-      // OJS push matches what the user sees. Within a section, manual `order`
-      // takes precedence over the original `seq`.
+      // Sort the corpus articles the same way the corpus page does, so
+      // the OJS push matches what the user sees. Sections by `sectionSeq`
+      // (per-issue custom order captured at import); within a section,
+      // manual `order` wins over publication `seq`.
       const sorted = [...corpus.articles].sort((a, b) => {
-        const sa = String(a.section ?? '')
-        const sb = String(b.section ?? '')
-        if (sa !== sb) return sa.localeCompare(sb)
+        const ssa = a.sectionSeq
+        const ssb = b.sectionSeq
+        if (ssa != null && ssb != null && ssa !== ssb) return ssa - ssb
+        if (ssa != null && ssb == null) return -1
+        if (ssa == null && ssb != null) return 1
+        if (ssa == null && ssb == null) {
+          const sa = String(a.section ?? '')
+          const sb = String(b.section ?? '')
+          if (sa !== sb) return sa.localeCompare(sb)
+        }
         const ka = a.order ?? a.seq ?? 0
         const kb = b.order ?? b.seq ?? 0
         return ka - kb
