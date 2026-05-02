@@ -649,8 +649,25 @@ describe('ojs resolver', () => {
     })
   }
 
-  function mockOjsAuthorEndpoints(existing) {
+  function mockOjsAuthorEndpoints(existing, publicationForMerge = null) {
+    const pub =
+      publicationForMerge ?? {
+        id: 777,
+        title: {
+          en_US: 'Previous EN',
+          fr_CA: 'Titre FR conservé',
+        },
+        abstract: {
+          en_US: 'Previous abstract EN',
+          fr_CA: 'Résumé FR conservé',
+        },
+      }
     return {
+      getPublication: mock.method(
+        ojsHelper,
+        'getOjsPublication',
+        async () => pub
+      ),
       updatePub: mock.method(
         ojsHelper,
         'updateOjsPublication',
@@ -717,8 +734,14 @@ describe('ojs resolver', () => {
       555,
       777,
       {
-        title: { en_US: 'Pushed Title' },
-        abstract: { en_US: 'Pushed Abstract' },
+        title: {
+          en_US: 'Pushed Title',
+          fr_CA: 'Titre FR conservé',
+        },
+        abstract: {
+          en_US: 'Pushed Abstract',
+          fr_CA: 'Résumé FR conservé',
+        },
         pages: '7',
       },
     ])

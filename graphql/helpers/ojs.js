@@ -4,6 +4,33 @@ const {
   getAvailableOjsInstances,
 } = require('./ojsConfig')
 
+const OJS_ERROR_BODY_MAX = 2000
+
+/**
+ * Extract a human-readable message from an OJS/PKP JSON error body (if any).
+ * @param {string} text - Raw response body
+ * @returns {string}
+ */
+function formatOjsApiErrorDetail(text) {
+  if (text == null || !String(text).trim()) return ''
+  const trimmed = String(text).trim()
+  try {
+    const json = JSON.parse(trimmed)
+    if (typeof json === 'string') return json.slice(0, OJS_ERROR_BODY_MAX)
+    const msg =
+      json.errorMessage ??
+      json.message ??
+      (typeof json.error === 'string' ? json.error : null)
+    if (msg) return String(msg).slice(0, OJS_ERROR_BODY_MAX)
+    if (json.errors && typeof json.errors === 'object') {
+      return JSON.stringify(json.errors).slice(0, OJS_ERROR_BODY_MAX)
+    }
+    return trimmed.slice(0, OJS_ERROR_BODY_MAX)
+  } catch {
+    return trimmed.slice(0, OJS_ERROR_BODY_MAX)
+  }
+}
+
 /**
  * Fetch from an OJS API instance (OJS 3.x / 3.5 compatible).
  * Endpoint is used as-is to support index.php-style URLs (e.g. .../index.php/journal/api/v1).
@@ -26,14 +53,35 @@ async function fetchOjs(instance, path, options = {}) {
   logger.info(`Fetching OJS data [${instance}]: ${path}`)
 
   const response = await fetch(urlWithAuth, options)
+  const text = await response.text()
 
   if (!response.ok) {
+    const detail = formatOjsApiErrorDetail(text)
+    logger.warn(
+      `OJS API error [${instance}] ${response.status} ${path}${detail ? `: ${detail}` : ''}`
+    )
     throw new Error(
-      `OJS API Error [${instance}]: ${response.status} ${response.statusText}`
+      `OJS API Error [${instance}]: ${response.status} ${response.statusText}${
+        detail ? ` — ${detail}` : ''
+      }`
     )
   }
 
-  return response.json()
+  if (!text || !String(text).trim()) {
+    return null
+  }
+
+  try {
+    return JSON.parse(text)
+  } catch (err) {
+    logger.warn(
+      { err, snippet: text.slice(0, 240) },
+      'OJS returned a non-JSON success body'
+    )
+    throw new Error(
+      `OJS API returned non-JSON response [${instance}]: ${response.status} ${response.statusText}`
+    )
+  }
 }
 
 /**

@@ -1,62 +1,58 @@
 {
   "ui:groups": [
     {
-      "title": "article.ojs.general",
+      "title": "ojs.section.general",
       "fields": ["locale", "issue", "start_page", "short_title", "short_author"]
     },
     {
-      "title": "article.ojs.title",
+      "title": "title",
       "fields": ["title"]
     },
     {
-      "title": "article.ojs.authors",
+      "title": "authors",
       "fields": ["authors"]
     },
     {
-      "title": "article.ojs.abstract",
+      "title": "abstract",
       "fields": ["abstract"]
     }
   ],
   "locale": {
-    "ui:title": "article.ojs.locale",
+    "ui:title": "language",
     "ui:placeholder": "en"
   },
-  "title": {
-    "ui:title": "article.ojs.titleLabel",
-    "ui:description": "article.ojs.titleDescription"
-  },
+  "title": {},
   "authors": {
-    "ui:add-item-title": "article.ojs.addAuthor",
+    "ui:add-item-title": "authors.itemAdd",
     "items": {
-      "ui:classNames": "ojs-author",
-      "givenName": {
-        "ui:title": "article.ojs.givenName",
-        "ui:description": "article.ojs.localeKeys"
-      },
-      "familyName": {
-        "ui:title": "article.ojs.familyName",
-        "ui:description": "article.ojs.localeKeys"
-      }
+      "ui:className": "ojs-author",
+      "ui:groups": [
+        { "title": "ojs.givenName", "fields": ["givenName"] },
+        { "title": "ojs.familyName", "fields": ["familyName"] }
+      ]
     }
   },
   "abstract": {
-    "ui:title": "article.ojs.abstractLabel",
-    "ui:widget": "textarea",
-    "ui:description": "article.ojs.abstractDescription"
+    "additionalProperties": {
+      "ui:widget": "textarea",
+      "ui:options": {
+        "rows": 8
+      }
+    }
   },
   "issue": {
-    "ui:title": "article.ojs.issue",
+    "ui:title": "issue",
     "ui:placeholder": "15-1, 2024"
   },
   "start_page": {
-    "ui:title": "article.ojs.start_page",
+    "ui:title": "ojs.startPage",
     "ui:widget": "updown"
   },
   "short_title": {
-    "ui:title": "article.ojs.short_title"
+    "ui:title": "ojs.shortTitle"
   },
   "short_author": {
-    "ui:title": "article.ojs.short_author",
+    "ui:title": "ojs.shortAuthor",
     "ui:placeholder": "hambuch"
   }
 }

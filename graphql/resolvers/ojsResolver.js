@@ -638,7 +638,22 @@ module.exports = {
         )
       }
 
-      const body = mapMetadataToPublicationUpdate(metadata)
+      let existingPublication = null
+      try {
+        existingPublication = await ojsHelper.getOjsPublication(
+          targetInstance,
+          submissionId,
+          publicationId
+        )
+      } catch (err) {
+        logger.warn(
+          `pushArticleMetadataToOJS: could not GET publication ${publicationId} for merge (${err.message}); using side-panel fields only`
+        )
+      }
+      const body = mapMetadataToPublicationUpdate(
+        metadata,
+        existingPublication
+      )
       if (Object.keys(body).length === 0 && !Array.isArray(metadata.authors)) {
         throw new Error('No pushable fields are set on this article.')
       }
@@ -657,12 +672,22 @@ module.exports = {
       }
 
       if (Array.isArray(metadata.authors)) {
-        await syncOjsAuthors(
-          targetInstance,
-          submissionId,
-          publicationId,
-          metadata.authors
-        )
+        // Author sync is best-effort: some OJS installs do not expose
+        // /publications/:id/authors (older versions or installs without the
+        // route registered). A failure here must not roll back the publication
+        // metadata PUT we already succeeded with above.
+        try {
+          await syncOjsAuthors(
+            targetInstance,
+            submissionId,
+            publicationId,
+            metadata.authors
+          )
+        } catch (err) {
+          logger.warn(
+            `pushArticleMetadataToOJS: skipping author sync for article ${articleId} (${err.message})`
+          )
+        }
       }
 
       return true

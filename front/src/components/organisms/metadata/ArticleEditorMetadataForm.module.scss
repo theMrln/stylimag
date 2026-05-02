@@ -25,3 +25,37 @@
   color: var(--color-error, #c53030);
   align-self: center;
 }
+
+/**
+ * Visual rhythm for the OJS metadata form: dividers between top-level
+ * sections (General / Title / Authors / Abstract) and between individual
+ * authors so the panel reads cleanly without affecting other metadata forms.
+ */
+.ojsForm {
+  :global(form) > :global(fieldset) {
+    padding-bottom: 1.5rem;
+    margin-bottom: 1.5rem;
+    border-bottom: 1px solid #e5e7eb;
+  }
+
+  :global(form) > :global(fieldset:last-of-type) {
+    border-bottom: none;
+    margin-bottom: 0;
+  }
+
+  :global(.ojs-author) {
+    padding: 1rem 0 0.5rem;
+    margin-top: 1rem;
+    border-top: 1px dashed #d1d5db;
+  }
+
+  :global(.ojs-author):first-of-type {
+    margin-top: 0.5rem;
+    padding-top: 0;
+    border-top: none;
+  }
+
+  :global(.ojs-author) :global(fieldset) + :global(fieldset) {
+    margin-top: 0.75rem;
+  }
+}

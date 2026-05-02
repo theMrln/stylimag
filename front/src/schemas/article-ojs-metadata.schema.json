@@ -6,7 +6,6 @@
   "definitions": {
     "localizedString": {
       "type": "object",
-      "description": "Locale-keyed strings (e.g. en_US, fr_CA)",
       "additionalProperties": { "type": "string" }
     },
     "ojsAuthor": {
@@ -26,16 +25,14 @@
       "default": "en"
     },
     "title": {
-      "$ref": "#/definitions/localizedString",
-      "description": "Localized title (en_US, fr_CA, …)"
+      "$ref": "#/definitions/localizedString"
     },
     "authors": {
       "type": "array",
       "items": { "$ref": "#/definitions/ojsAuthor" }
     },
     "abstract": {
-      "$ref": "#/definitions/localizedString",
-      "description": "Localized abstract (HTML allowed)"
+      "$ref": "#/definitions/localizedString"
     },
     "issue": {
       "type": "string",

@@ -6,6 +6,26 @@ const testConfig = {
   api_token: 'test-token-123',
 }
 
+/** ojs.js reads bodies via response.text(); mocks must supply text(), not only json(). */
+function mockOjsFetchSuccess(data) {
+  const body = JSON.stringify(data)
+  return {
+    ok: true,
+    status: 200,
+    statusText: 'OK',
+    text: async () => body,
+  }
+}
+
+function mockOjsFetchError(status, statusText, body = '') {
+  return {
+    ok: false,
+    status,
+    statusText,
+    text: async () => body,
+  }
+}
+
 describe('ojs helper', () => {
   let ojsHelper
 
@@ -27,13 +47,20 @@ describe('ojs helper', () => {
   describe('getOjsIssues', () => {
     test('fetches issues with correct URL', async () => {
       const mockIssues = [
-        { id: 1, title: { en_US: 'Issue 1' } },
-        { id: 2, title: { en_US: 'Issue 2' } },
+        {
+          id: 1,
+          title: { en_US: 'Issue 1' },
+          datePublished: '2022-01-01',
+        },
+        {
+          id: 2,
+          title: { en_US: 'Issue 2' },
+          datePublished: '2021-01-01',
+        },
       ]
-      global.fetch.mock.mockImplementation(async () => ({
-        ok: true,
-        json: async () => ({ items: mockIssues }),
-      }))
+      global.fetch.mock.mockImplementation(async () =>
+        mockOjsFetchSuccess({ items: mockIssues })
+      )
 
       const result = await ojsHelper.getOjsIssues('staging')
 
@@ -47,10 +74,7 @@ describe('ojs helper', () => {
     })
 
     test('returns empty array when no items', async () => {
-      global.fetch.mock.mockImplementation(async () => ({
-        ok: true,
-        json: async () => ({}),
-      }))
+      global.fetch.mock.mockImplementation(async () => mockOjsFetchSuccess({}))
 
       const result = await ojsHelper.getOjsIssues('production')
 
@@ -58,16 +82,15 @@ describe('ojs helper', () => {
     })
 
     test('returns issues sorted latest first', async () => {
-      global.fetch.mock.mockImplementation(async () => ({
-        ok: true,
-        json: async () => ({
+      global.fetch.mock.mockImplementation(async () =>
+        mockOjsFetchSuccess({
           items: [
             { id: 1, datePublished: '2020-01-01', year: 2020 },
             { id: 3, datePublished: '2023-06-15', year: 2023 },
             { id: 2, datePublished: '2021-05-01', year: 2021 },
           ],
-        }),
-      }))
+        })
+      )
 
       const result = await ojsHelper.getOjsIssues('staging')
 
@@ -77,14 +100,29 @@ describe('ojs helper', () => {
     })
 
     test('throws on API error', async () => {
-      global.fetch.mock.mockImplementation(async () => ({
-        ok: false,
-        status: 401,
-        statusText: 'Unauthorized',
-      }))
+      global.fetch.mock.mockImplementation(async () =>
+        mockOjsFetchError(401, 'Unauthorized')
+      )
 
       await assert.rejects(async () => ojsHelper.getOjsIssues('staging'), {
         message: /OJS API Error \[staging\]: 401 Unauthorized/,
+      })
+    })
+
+    test('throws on API error and appends JSON error detail when present', async () => {
+      global.fetch.mock.mockImplementation(async () =>
+        mockOjsFetchError(
+          500,
+          'Internal Server Error',
+          JSON.stringify({
+            errorMessage: 'Validation failed for title',
+          })
+        )
+      )
+
+      await assert.rejects(async () => ojsHelper.getOjsIssues('staging'), {
+        message:
+          /OJS API Error \[staging\]: 500 Internal Server Error — Validation failed for title/,
       })
     })
   })
@@ -96,10 +134,9 @@ describe('ojs helper', () => {
         title: { en_US: 'Test Issue' },
         description: { en_US: 'Description' },
       }
-      global.fetch.mock.mockImplementation(async () => ({
-        ok: true,
-        json: async () => mockMetadata,
-      }))
+      global.fetch.mock.mockImplementation(async () =>
+        mockOjsFetchSuccess(mockMetadata)
+      )
 
       const result = await ojsHelper.getOjsIssueMetadata('staging', 123)
 
@@ -113,11 +150,9 @@ describe('ojs helper', () => {
     })
 
     test('throws on 404', async () => {
-      global.fetch.mock.mockImplementation(async () => ({
-        ok: false,
-        status: 404,
-        statusText: 'Not Found',
-      }))
+      global.fetch.mock.mockImplementation(async () =>
+        mockOjsFetchError(404, 'Not Found')
+      )
 
       await assert.rejects(
         async () => ojsHelper.getOjsIssueMetadata('staging', 999),
@@ -132,14 +167,13 @@ describe('ojs helper', () => {
         { id: 1, title: { en_US: 'Article 1' } },
         { id: 2, title: { en_US: 'Article 2' } },
       ]
-      global.fetch.mock.mockImplementation(async () => ({
-        ok: true,
-        json: async () => ({
+      global.fetch.mock.mockImplementation(async () =>
+        mockOjsFetchSuccess({
           id: 123,
           title: { en_US: 'Test Issue' },
           articles: mockArticles,
-        }),
-      }))
+        })
+      )
 
       const result = await ojsHelper.getOjsIssueSubmissions('staging', 123)
 
@@ -152,19 +186,13 @@ describe('ojs helper', () => {
         calls++
         const u = String(url)
         if (u.includes('/issues/')) {
-          return {
-            ok: true,
-            json: async () => ({
-              id: 123,
-              title: { en_US: 'Empty Issue' },
-            }),
-          }
+          return mockOjsFetchSuccess({
+            id: 123,
+            title: { en_US: 'Empty Issue' },
+          })
         }
         if (u.includes('/submissions?') && u.includes('issueIds')) {
-          return {
-            ok: true,
-            json: async () => ({ items: [] }),
-          }
+          return mockOjsFetchSuccess({ items: [] })
         }
         throw new Error(`unexpected fetch url: ${u}`)
       })
@@ -181,24 +209,18 @@ describe('ojs helper', () => {
         calls++
         const u = String(url)
         if (u.includes('/issues/88')) {
-          return {
-            ok: true,
-            json: async () => ({
-              id: 88,
-              title: { en_US: 'Future Issue' },
-            }),
-          }
+          return mockOjsFetchSuccess({
+            id: 88,
+            title: { en_US: 'Future Issue' },
+          })
         }
         if (u.includes('/submissions?') && u.includes('issueIds')) {
           assert.match(u, /issueIds%5B%5D=88|issueIds\[\]=88/)
-          return {
-            ok: true,
-            json: async () => ({
-              items: [
-                { id: 500, status: 5, title: { en_US: 'Scheduled submission' } },
-              ],
-            }),
-          }
+          return mockOjsFetchSuccess({
+            items: [
+              { id: 500, status: 5, title: { en_US: 'Scheduled submission' } },
+            ],
+          })
         }
         throw new Error(`unexpected fetch url: ${u}`)
       })
@@ -215,12 +237,9 @@ describe('ojs helper', () => {
       global.fetch.mock.mockImplementation(async (url) => {
         const u = String(url)
         assert.ok(u.includes('/submissions?') && u.includes('issueIds'))
-        return {
-          ok: true,
-          json: async () => ({
-            items: [{ id: 42, status: 3, title: { en_US: 'From list' } }],
-          }),
-        }
+        return mockOjsFetchSuccess({
+          items: [{ id: 42, status: 3, title: { en_US: 'From list' } }],
+        })
       })
 
       const result = await ojsHelper.getOjsIssueSubmissions('staging', 7, {
@@ -240,10 +259,9 @@ describe('ojs helper', () => {
         currentPublicationId: 456,
         title: { en_US: 'Submission Title' },
       }
-      global.fetch.mock.mockImplementation(async () => ({
-        ok: true,
-        json: async () => mockSubmission,
-      }))
+      global.fetch.mock.mockImplementation(async () =>
+        mockOjsFetchSuccess(mockSubmission)
+      )
 
       const result = await ojsHelper.getOjsSubmission('staging', 100)
 
@@ -265,10 +283,9 @@ describe('ojs helper', () => {
         title: { en_US: 'Publication Title' },
         abstract: { en_US: 'Abstract text' },
       }
-      global.fetch.mock.mockImplementation(async () => ({
-        ok: true,
-        json: async () => mockPublication,
-      }))
+      global.fetch.mock.mockImplementation(async () =>
+        mockOjsFetchSuccess(mockPublication)
+      )
 
       const result = await ojsHelper.getOjsPublication('staging', 100, 456)
 
@@ -291,13 +308,11 @@ describe('ojs helper', () => {
         fullTitle: { en_US: 'Full Title' },
         authors: [{ givenName: { en_US: 'Jane' }, familyName: { en_US: 'Doe' } }],
       }
-      global.fetch.mock.mockImplementation(async (url) => ({
-        ok: true,
-        json: async () => {
-          if (url.includes('/publications/')) return mockPublication
-          return articleFromIssue
-        },
-      }))
+      global.fetch.mock.mockImplementation(async (url) =>
+        mockOjsFetchSuccess(
+          url.includes('/publications/') ? mockPublication : articleFromIssue
+        )
+      )
 
       const result = await ojsHelper.getSubmissionWithFullPublication(
         'staging',
@@ -321,14 +336,11 @@ describe('ojs helper', () => {
       let callCount = 0
       global.fetch.mock.mockImplementation(async (url) => {
         callCount++
-        return {
-          ok: true,
-          json: async () => {
-            if (url.includes('/submissions/100') && !url.includes('/publications/'))
-              return mockSubmission
-            return mockPublication
-          },
-        }
+        const data =
+          url.includes('/submissions/100') && !url.includes('/publications/')
+            ? mockSubmission
+            : mockPublication
+        return mockOjsFetchSuccess(data)
       })
 
       const result = await ojsHelper.getSubmissionWithFullPublication(
@@ -355,10 +367,9 @@ describe('ojs helper', () => {
   describe('getOjsSection', () => {
     test('fetches section and returns title', async () => {
       const mockSection = { id: 1, title: { en_US: 'Articles' } }
-      global.fetch.mock.mockImplementation(async () => ({
-        ok: true,
-        json: async () => mockSection,
-      }))
+      global.fetch.mock.mockImplementation(async () =>
+        mockOjsFetchSuccess(mockSection)
+      )
       const result = await ojsHelper.getOjsSection('staging', 1)
       assert.deepEqual(result, mockSection)
       assert.match(

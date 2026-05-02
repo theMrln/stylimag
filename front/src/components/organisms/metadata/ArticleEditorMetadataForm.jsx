@@ -123,13 +123,15 @@ export default function ArticleEditorMetadataForm({
           <span className={styles.ojsPushError}>{pushStatus.error}</span>
         )}
       </div>
-      <Form
-        readOnly={readOnly}
-        formData={formData}
-        schema={schemaMerged}
-        uiSchema={uiSchema}
-        onChange={handleChange}
-      />
+      <div className={styles.ojsForm}>
+        <Form
+          readOnly={readOnly}
+          formData={formData}
+          schema={schemaMerged}
+          uiSchema={uiSchema}
+          onChange={handleChange}
+        />
+      </div>
     </>
   )
 }
