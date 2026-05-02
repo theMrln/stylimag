@@ -1,8 +1,9 @@
 import clsx from 'clsx'
-import { Plus, Trash } from 'lucide-react'
+import { GripVertical, Plus, Trash } from 'lucide-react'
 import { set } from 'object-path-immutable'
 import PropTypes from 'prop-types'
-import { Fragment, useCallback, useMemo, useState } from 'react'
+import { Fragment, useCallback, useMemo, useRef, useState } from 'react'
+import { useDrag, useDrop } from 'react-dnd'
 import { Translation } from 'react-i18next'
 
 import Form, { getDefaultRegistry } from '@rjsf/core'
@@ -118,6 +119,76 @@ function CustomCheckboxesWidget(properties) {
 }
 
 /**
+ * Render an array item with a drag handle. Hover-driven reorder calls into
+ * RJSF's own onReorderClick so the form data (and any onChange consumer such
+ * as the metadata-save flow) stays in sync. We keep the live `properties.items`
+ * reference in a ref so `moveItem` is stable across renders.
+ *
+ * @param {object} props
+ * @returns {Element}
+ */
+function DraggableArrayItem({
+  index,
+  type,
+  moveItem,
+  className,
+  children,
+  removeButton,
+  disabled,
+}) {
+  const ref = useRef(null)
+  const handleRef = useRef(null)
+
+  const [{ handlerId }, drop] = useDrop({
+    accept: type,
+    collect(monitor) {
+      return { handlerId: monitor.getHandlerId() }
+    },
+    hover(item) {
+      if (!ref.current) return
+      const dragIndex = item.index
+      const hoverIndex = index
+      if (dragIndex === hoverIndex) return
+      moveItem(dragIndex, hoverIndex)
+      // mutate the dragged item so subsequent hovers compare against the new index
+      item.index = hoverIndex
+    },
+  })
+
+  const [{ isDragging }, drag, preview] = useDrag({
+    type,
+    item: () => ({ index }),
+    canDrag: () => !disabled,
+    collect: (monitor) => ({ isDragging: monitor.isDragging() }),
+  })
+
+  preview(drop(ref))
+  drag(handleRef)
+
+  return (
+    <div
+      ref={ref}
+      data-handler-id={handlerId}
+      className={clsx(className, styles.draggableArrayItem)}
+      style={{ opacity: isDragging ? 0.4 : 1 }}
+    >
+      <span
+        ref={handleRef}
+        className={styles.dragHandle}
+        aria-label="Drag to reorder"
+        title="Drag to reorder"
+      >
+        <GripVertical size={16} />
+      </span>
+      <div className={styles.draggableArrayItemBody}>
+        {children}
+        {removeButton}
+      </div>
+    </div>
+  )
+}
+
+/**
  * @param {ArrayFieldTemplateProps} properties
  * @returns {Element}
  */
@@ -127,9 +198,54 @@ function ArrayFieldTemplate(properties) {
   const removeItemTitle =
     properties.uiSchema['ui:remove-item-title'] ?? 'form.itemRemove'
   const title = properties.uiSchema['ui:title']
+  const draggable = properties.uiSchema['ui:options']?.draggable === true
   const inlineRemoveButton =
     properties.schema?.items?.type === 'string' || !removeItemTitle
-  const items = [...properties.items].reverse()
+  // For draggable arrays, preserve natural order so the displayed sequence
+  // matches what gets written back to OJS as `seq: i`. For everything else
+  // keep the existing newest-first display.
+  const items = draggable
+    ? properties.items
+    : [...properties.items].reverse()
+
+  // Keep a ref to the live items so the moveItem callback stays stable.
+  const itemsRef = useRef(properties.items)
+  itemsRef.current = properties.items
+  const moveItem = useCallback((dragIndex, hoverIndex) => {
+    const fn = itemsRef.current[dragIndex]?.onReorderClick(
+      dragIndex,
+      hoverIndex
+    )
+    if (typeof fn === 'function') fn()
+  }, [])
+
+  // Per-array drag type so concurrent draggable arrays do not steal each other's items.
+  const dragType = `rjsf-array-${properties.idSchema?.$id || properties.id || 'default'}`
+
+  const renderRemoveButton = (element) =>
+    element.hasRemove ? (
+      <Button
+        icon={inlineRemoveButton}
+        type="button"
+        className={[
+          styles.removeButton,
+          inlineRemoveButton ? styles.inlineRemoveButton : '',
+        ].join(' ')}
+        tabIndex={-1}
+        disabled={element.disabled || element.readonly}
+        onClick={element.onDropIndexClick(element.index)}
+      >
+        <Trash />
+        {inlineRemoveButton ? (
+          ''
+        ) : (
+          <Translation ns="form" useSuspense={false}>
+            {(t) => t(removeItemTitle)}
+          </Translation>
+        )}
+      </Button>
+    ) : null
+
   return (
     <fieldset
       className={clsx(styles.fieldset, styles.array)}
@@ -156,39 +272,34 @@ function ArrayFieldTemplate(properties) {
       )}
       {items &&
         items.map((element) => {
+          const wrapperClassName = clsx(
+            element.className,
+            'can-add-remove',
+            element?.uiSchema?.['ui:className']
+          )
+          if (draggable) {
+            return (
+              <DraggableArrayItem
+                key={element.key}
+                index={element.index}
+                type={dragType}
+                moveItem={moveItem}
+                className={wrapperClassName}
+                disabled={element.disabled || element.readonly}
+                removeButton={renderRemoveButton(element)}
+              >
+                {element.children}
+              </DraggableArrayItem>
+            )
+          }
           return (
             <div
               id={element.key}
               key={element.key}
-              className={clsx(
-                element.className,
-                'can-add-remove',
-                element?.uiSchema?.['ui:className']
-              )}
+              className={wrapperClassName}
             >
               {element.children}
-              {element.hasRemove && (
-                <Button
-                  icon={inlineRemoveButton}
-                  type="button"
-                  className={[
-                    styles.removeButton,
-                    inlineRemoveButton ? styles.inlineRemoveButton : '',
-                  ].join(' ')}
-                  tabIndex={-1}
-                  disabled={element.disabled || element.readonly}
-                  onClick={element.onDropIndexClick(element.index)}
-                >
-                  <Trash />
-                  {inlineRemoveButton ? (
-                    ''
-                  ) : (
-                    <Translation ns="form" useSuspense={false}>
-                      {(t) => t(removeItemTitle)}
-                    </Translation>
-                  )}
-                </Button>
-              )}
+              {renderRemoveButton(element)}
             </div>
           )
         })}

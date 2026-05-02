@@ -302,3 +302,39 @@
   margin: 0.5em;
   padding: 0.5rem;
 }
+
+/**
+ * Reorderable array items (opt-in via `ui:options.draggable: true`).
+ * Layout: drag handle on the left, item body on the right.
+ */
+.draggableArrayItem {
+  display: flex;
+  align-items: stretch;
+  gap: 0.5rem;
+}
+
+.draggableArrayItemBody {
+  flex: 1;
+  min-width: 0;
+}
+
+.dragHandle {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  cursor: grab;
+  color: #9ca3af;
+  user-select: none;
+  padding: 0.5rem 0.25rem 0;
+  border-radius: 0.25rem;
+  flex: 0 0 auto;
+
+  &:hover {
+    color: #4b5563;
+    background-color: #f3f4f6;
+  }
+
+  &:active {
+    cursor: grabbing;
+  }
+}

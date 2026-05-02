@@ -1,4 +1,5 @@
 import React, { useCallback, useMemo, useState } from 'react'
+import { DndProvider } from 'react-dnd'
 import { useTranslation } from 'react-i18next'
 import { RefreshCw, Upload } from 'lucide-react'
 
@@ -10,6 +11,7 @@ import {
   mapOjsToOjsMetadata,
   normalizeMetadataToOjsShape,
 } from '../../../helpers/ojsMapper.js'
+import { dragAndDropManager } from '../../../hooks/dnd.js'
 import { usePushArticleMetadataToOJS } from '../../../hooks/ojs.js'
 
 import Button from '../../atoms/Button.jsx'
@@ -124,13 +126,15 @@ export default function ArticleEditorMetadataForm({
         )}
       </div>
       <div className={styles.ojsForm}>
-        <Form
-          readOnly={readOnly}
-          formData={formData}
-          schema={schemaMerged}
-          uiSchema={uiSchema}
-          onChange={handleChange}
-        />
+        <DndProvider manager={dragAndDropManager} backend={undefined}>
+          <Form
+            readOnly={readOnly}
+            formData={formData}
+            schema={schemaMerged}
+            uiSchema={uiSchema}
+            onChange={handleChange}
+          />
+        </DndProvider>
       </div>
     </>
   )

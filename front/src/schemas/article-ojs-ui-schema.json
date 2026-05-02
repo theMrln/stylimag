@@ -24,6 +24,9 @@
   "title": {},
   "authors": {
     "ui:add-item-title": "authors.itemAdd",
+    "ui:options": {
+      "draggable": true
+    },
     "items": {
       "ui:className": "ojs-author",
       "ui:groups": [
