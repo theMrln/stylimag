@@ -263,7 +263,6 @@ export default function Article({ article, corpus }) {
       >
         <Export
           articleId={article._id}
-          bib={article.workingVersion?.bibPreview}
           name={article.title}
           onCancel={() => exportModal.close()}
         />

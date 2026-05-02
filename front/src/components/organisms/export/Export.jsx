@@ -1,206 +1,164 @@
 import clsx from 'clsx'
-import { useCallback, useMemo } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { shallowEqual, useDispatch, useSelector } from 'react-redux'
 import slugify from 'slugify'
 
 import { applicationConfig } from '../../../config.js'
-import useStyloExport from '../../../hooks/stylo-export.js'
 import {
-  inferExportFormat,
-  persistExportFromUrl,
-} from '../../../helpers/exportPersistence.js'
+  useArticleVersion,
+  useEditableArticle,
+} from '../../../hooks/article.js'
+import {
+  isPandocEndpointUsable,
+  useStyloExportPreview,
+} from '../../../hooks/stylo-export.js'
+import { buildPreviewWithMetadataHeader } from '../../../helpers/previewMetadata.js'
+import previewImaginationsCss from '../../../styles/preview-imaginations.css?raw'
+
 import { Button, Select } from '../../atoms/index.js'
-import { Combobox, Loading } from '../../molecules/index.js'
 
 import buttonStyles from '../../atoms/Button.module.scss'
 import formStyles from '../../molecules/form.module.scss'
 import styles from './Export.module.scss'
 
+const FORMAT_MARKDOWN = 'markdown'
+const FORMAT_HTML = 'html'
+
+/**
+ * Trigger a client-side download of the given content.
+ * @param {{content: BlobPart, filename: string, mimeType: string}} args
+ */
+function downloadBlob({ content, filename, mimeType }) {
+  const blob = new Blob([content], { type: mimeType })
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = filename
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+  /* Revoke on the next tick: revoking immediately races with the click handler
+     in some browsers and aborts the download. */
+  setTimeout(() => URL.revokeObjectURL(url), 0)
+}
+
+function escapeHtml(s) {
+  if (s == null) return ''
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
+
+/**
+ * Compose a stand-alone HTML document from a body fragment, embedding the
+ * Imaginations preview stylesheet so the export looks like the in-app
+ * "faithful preview" without depending on the Stylo CSS bundle.
+ * @param {{title: string, bodyHtml: string}} args
+ * @returns {string}
+ */
+function buildHtmlDocument({ title, bodyHtml }) {
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>${escapeHtml(title)}</title>
+<style>
+${previewImaginationsCss}
+</style>
+</head>
+<body class="stylo-preview-imaginations">
+${bodyHtml}
+</body>
+</html>
+`
+}
+
+/**
+ * Concatenate the YAML front matter and the markdown body the way Stylo
+ * stores articles on disk and the way the editor's "draft view" shows the
+ * source. The GraphQL `yaml(strip_markdown: true)` output is already wrapped
+ * in `---\n...---`, so we only need to ensure a separating newline.
+ * @param {{yaml?: string|null, md?: string|null}} args
+ * @returns {string}
+ */
+function buildMarkdownContent({ yaml, md }) {
+  const yamlPart = yaml ? (yaml.endsWith('\n') ? yaml : yaml + '\n') : ''
+  const body = md ?? ''
+  if (!yamlPart) return body
+  return body.startsWith('\n') ? yamlPart + body : yamlPart + '\n' + body
+}
+
 /**
  * @param {object} props
  * @param {string?} props.bookId
- * @param {string?} props.articleVersionId
+ * @param {string?} props.articleVersionId - deprecated alias of versionId
+ * @param {string?} props.versionId
  * @param {string?} props.articleId
- * @param {string} props.bib
  * @param {string} props.name
- * @param {() => void} props.onCancel
+ * @param {() => void} [props.onCancel]
  * @returns {React.ReactElement}
  */
 export default function Export({
   bookId,
   articleVersionId = '',
+  versionId: versionIdProp,
   articleId,
-  bib,
   name,
   onCancel,
 }) {
   const { t } = useTranslation()
-  const dispatch = useDispatch()
-  const { pandocExportHost, pandocExportEndpoint } = applicationConfig
+  const versionId = versionIdProp ?? articleVersionId ?? ''
+  const [format, setFormat] = useState(FORMAT_MARKDOWN)
 
-  const { bibliography_style, with_toc, link_citations, with_nocite, formats } =
-    useSelector((state) => state.exportPreferences, shallowEqual)
+  const filenameBase = useMemo(
+    () => slugify(name || 'export', { strict: true, lower: true }) || 'export',
+    [name]
+  )
 
-  const setPreference = useCallback(
-    (key) => (event) =>
-      dispatch({
-        type: 'SET_EXPORT_PREFERENCES',
-        key,
-        value: event?.target?.value ?? event,
-      }),
+  const exportEndpointUsable = useMemo(
+    () => isPandocEndpointUsable(applicationConfig.pandocExportEndpoint),
     []
   )
 
-  const { exportFormats, exportStyles, exportStylesPreview, isLoading } =
-    useStyloExport({ bibliography_style, bib })
+  const isCorpus = !!bookId && !articleId
+  const { pandocExportHost, pandocExportEndpoint } = applicationConfig
 
-  const exportId = useMemo(
-    () =>
-      slugify(name, { strict: true, lower: true }) ||
-      (articleVersionId ?? articleId ?? bookId),
-    [name]
-  )
-  const groupedExportStyles = useMemo(() => {
-    return exportStyles?.map(({ key, name }, index) => ({
-      key,
-      name,
-      section: '',
-      // pre-assign an index to each entry. It will persist upon filtered results.
-      // @see https://github.com/EcrituresNumeriques/stylo/issues/1014
-      index,
-    }))
-  }, [exportStyles])
-
-  const exportUrl = useMemo(() => {
-    return `${pandocExportEndpoint}/generique/${
-      articleId ? 'article' : 'corpus'
-    }/export/${pandocExportHost}/${
-      articleId ?? bookId
-    }/${exportId}/?with_toc=${with_toc}&with_nocite=${with_nocite}&with_link_citations=${link_citations}&with_ascii=0&bibliography_style=${bibliography_style}&formats=originals&formats=${formats}&version=${articleVersionId}`
-  }, [with_toc, bibliography_style, formats, with_nocite, link_citations])
-
-  const handleExportClick = useCallback(() => {
-    if (articleId) {
-      const optionsHash = [
-        formats,
-        bibliography_style,
-        with_toc,
-        with_nocite,
-        link_citations,
-      ].join('|')
-      persistExportFromUrl({
-        url: exportUrl,
-        articleId,
-        versionId: articleVersionId || undefined,
-        format: inferExportFormat(formats),
-        optionsHash,
-      }).catch(() => {
-        /* fire-and-forget: download keeps working regardless */
-      })
-    }
-  }, [
-    articleId,
-    articleVersionId,
-    bibliography_style,
-    exportUrl,
-    formats,
-    link_citations,
-    with_nocite,
-    with_toc,
-  ])
+  /* The corpus export still goes through the pandoc-export microservice
+     because building an assembled HTML/Markdown for a multi-article corpus
+     client-side would require fetching every working version and stitching
+     them, which is out of scope for this simplification. */
+  const corpusExportUrl = useMemo(() => {
+    if (!bookId) return ''
+    const formatsParam = format === FORMAT_MARKDOWN ? 'originals' : 'html'
+    return `${pandocExportEndpoint}/generique/corpus/export/${pandocExportHost}/${bookId}/${filenameBase}/?with_toc=0&with_nocite=1&with_link_citations=1&with_ascii=0&formats=${formatsParam}`
+  }, [bookId, filenameBase, format, pandocExportEndpoint, pandocExportHost])
 
   return (
     <>
       <section className={styles.export}>
         <form className={formStyles.form}>
-          {!exportFormats.length && <Loading size="1.5rem" />}
-          {exportFormats.length && (
-            <Select
-              id="export-formats"
-              label={t('export.format.label')}
-              value={formats}
-              onChange={setPreference('formats')}
-            >
-              {exportFormats.map(({ key, name }) => (
-                <option value={key} key={key}>
-                  {name}
-                </option>
-              ))}
-            </Select>
-          )}
-
-          {bib && !exportStyles.length && <Loading inline size="1.5rem" />}
-          {bib && exportStyles.length && (
-            <Combobox
-              id="export-styles"
-              label={t('export.bibliography.label')}
-              items={groupedExportStyles}
-              value={bibliography_style}
-              onChange={setPreference('bibliography_style')}
-            />
-          )}
-          {bib && (
-            <div className={styles.bibliographyPreview}>
-              {isLoading && <Loading inline size="1.5rem" />}
-              {!isLoading && (
-                <div
-                  dangerouslySetInnerHTML={{ __html: exportStylesPreview }}
-                />
-              )}
-            </div>
-          )}
-
           <Select
-            label={t('export.toc.label')}
-            value={with_toc}
-            onChange={setPreference('with_toc')}
+            id="export-format"
+            label={t('export.format.label')}
+            value={format}
+            onChange={(event) => setFormat(event.target.value)}
           >
-            <option value="1">{t('export.toc.yes')}</option>
-            <option value="0">{t('export.toc.no')}</option>
-          </Select>
-
-          <Select
-            label={t('export.nocite.label')}
-            value={with_nocite}
-            onChange={setPreference('with_nocite')}
-          >
-            <option value="1">{t('export.nocite.all')}</option>
-            <option value="0">{t('export.nocite.onlyUsed')}</option>
-          </Select>
-
-          <Select
-            label={t('export.linkCitations.label')}
-            value={link_citations}
-            onChange={setPreference('link_citations')}
-          >
-            <option value="1">{t('export.linkCitations.yes')}</option>
-            <option value="0">{t('export.linkCitations.no')}</option>
-          </Select>
-
-          {/*bookId && (
-          <Select
-            id="export-numbering"
-            value={unnumbered}
-            onChange={setPreference('unnumbered')}
-          >
-            <option value="false">
-              {t('export.sectionChapters.numbered')}
+            <option value={FORMAT_MARKDOWN}>
+              {t('export.format.markdown')}
             </option>
-            <option value="true">
-              {t('export.sectionChapters.unnumbered')}
-            </option>
+            <option value={FORMAT_HTML}>{t('export.format.html')}</option>
           </Select>
-        )*/}
-          {/*bookId && (
-          <Select
-            value={book_division}
-            onChange={setPreference('book_division')}
-          >
-            <option value="part">{t('export.bookDivision.part')}</option>
-            <option value="chapter">{t('export.bookDivision.chapter')}</option>
-          </Select>
-        )*/}
+
+          {!isCorpus &&
+            format === FORMAT_HTML &&
+            !exportEndpointUsable && (
+              <p className={styles.disabledNotice}>
+                {t('export.html.endpointUnavailable')}
+              </p>
+            )}
         </form>
       </section>
 
@@ -208,23 +166,136 @@ export default function Export({
         {onCancel && (
           <Button
             aria-label={t('modal.cancelButton.label')}
-            secondary={true}
+            secondary
             onClick={() => onCancel()}
           >
             {t('modal.cancelButton.text')}
           </Button>
         )}
-        <a
-          className={clsx(buttonStyles.button, buttonStyles.primary)}
-          href={exportUrl}
-          rel="noreferrer noopener"
-          target="_blank"
-          role="button"
-          onClick={handleExportClick}
-        >
-          {t('export.submitForm.button')}
-        </a>
+        {isCorpus ? (
+          <a
+            className={clsx(buttonStyles.button, buttonStyles.primary)}
+            href={corpusExportUrl}
+            rel="noreferrer noopener"
+            target="_blank"
+            role="button"
+          >
+            {t('export.downloadButton.text')}
+          </a>
+        ) : (
+          <ArticleExportButton
+            articleId={articleId}
+            versionId={versionId}
+            format={format}
+            filenameBase={filenameBase}
+            name={name}
+            onCancel={onCancel}
+            exportEndpointUsable={exportEndpointUsable}
+          />
+        )}
       </footer>
     </>
+  )
+}
+
+/**
+ * Article-only download button. Lives in its own component so the article
+ * GraphQL hooks (`useEditableArticle`, `useArticleVersion`) are never called
+ * with empty IDs in the corpus path.
+ * @param {object} props
+ * @param {string} props.articleId
+ * @param {string} props.versionId
+ * @param {string} props.format - 'markdown' | 'html'
+ * @param {string} props.filenameBase
+ * @param {string} [props.name]
+ * @param {() => void} [props.onCancel]
+ * @param {boolean} props.exportEndpointUsable
+ * @returns {React.ReactElement}
+ */
+function ArticleExportButton({
+  articleId,
+  versionId,
+  format,
+  filenameBase,
+  name,
+  onCancel,
+  exportEndpointUsable,
+}) {
+  const { t } = useTranslation()
+  /* `useEditableArticle`'s `hasVersion` flag is `typeof versionId === 'string'`,
+     so an empty string would request the (nonexistent) version "" instead of
+     the working copy. Normalize to `undefined` for the working-copy case. */
+  const effectiveVersionId = versionId || undefined
+  const { article } = useEditableArticle({
+    articleId,
+    versionId: effectiveVersionId,
+  })
+  const { version } = useArticleVersion({ versionId: effectiveVersionId })
+
+  const md = effectiveVersionId ? version?.md : article?.workingVersion?.md
+  const yaml = effectiveVersionId
+    ? version?.yaml
+    : article?.workingVersion?.yaml
+  const metadata = effectiveVersionId
+    ? version?.metadata
+    : article?.workingVersion?.metadata
+  const bib = effectiveVersionId
+    ? version?.bib
+    : article?.workingVersion?.bib
+
+  const wantsHtml = format === FORMAT_HTML
+  const { html: previewHtml, isLoading: isHtmlLoading } = useStyloExportPreview(
+    {
+      md_content: wantsHtml ? md : undefined,
+      yaml_content: yaml,
+      bib_content: bib,
+      with_toc: false,
+      with_nocite: true,
+      with_link_citations: true,
+    }
+  )
+
+  const markdownReady = md !== undefined && md !== null
+  const htmlReady = wantsHtml && !!previewHtml && !isHtmlLoading
+
+  const handleDownload = useCallback(() => {
+    if (format === FORMAT_MARKDOWN) {
+      downloadBlob({
+        content: buildMarkdownContent({ yaml, md }),
+        filename: `${filenameBase}.md`,
+        mimeType: 'text/markdown;charset=utf-8',
+      })
+      onCancel?.()
+      return
+    }
+    if (format === FORMAT_HTML && previewHtml) {
+      const { fullArticleHtml } = buildPreviewWithMetadataHeader(
+        metadata,
+        previewHtml
+      )
+      const html = buildHtmlDocument({
+        title: name || filenameBase,
+        bodyHtml: fullArticleHtml || previewHtml,
+      })
+      downloadBlob({
+        content: html,
+        filename: `${filenameBase}.html`,
+        mimeType: 'text/html;charset=utf-8',
+      })
+      onCancel?.()
+    }
+  }, [filenameBase, format, md, metadata, name, onCancel, previewHtml, yaml])
+
+  const canDownload =
+    format === FORMAT_MARKDOWN
+      ? markdownReady
+      : htmlReady && exportEndpointUsable
+
+  return (
+    <Button primary onClick={handleDownload} disabled={!canDownload}>
+      {format === FORMAT_HTML && isHtmlLoading
+        ? t('export.downloadButton.preparing')
+        : t('export.downloadButton.text')}
+    </Button>
   )
 }

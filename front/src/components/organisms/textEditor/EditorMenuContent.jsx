@@ -40,8 +40,8 @@ export default function EditorMenuContent({
           </h2>
           <Export
             articleId={articleId}
+            versionId={versionId}
             name={article?.title}
-            bib={article?.workingVersion?.bibPreview}
           />
         </>
       )}
