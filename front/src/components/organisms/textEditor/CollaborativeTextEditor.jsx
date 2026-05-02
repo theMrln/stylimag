@@ -286,27 +286,39 @@ export default function CollaborativeTextEditor({
     editorRef.current = editor
   }, [])
 
-  let timeoutId
   useEffect(() => {
-    if (yText) {
-      updateArticleStructureAndStats({ text: yText.toString() })
-      yText.observe(function (yTextEvent, transaction) {
+    if (!yText) return
+    /* `timeoutId` lives inside the effect so it's reset whenever the effect
+       reruns (article/version/yText change). The previous module-level `let`
+       was created fresh on every render, which broke the debounce check. */
+    let timeoutId
+    const onYTextChange = () => {
+      dispatch({
+        type: 'UPDATE_ARTICLE_WORKING_COPY_STATUS',
+        status: 'syncing',
+      })
+      if (timeoutId) {
+        clearTimeout(timeoutId)
+      }
+      timeoutId = setTimeout(() => {
         dispatch({
           type: 'UPDATE_ARTICLE_WORKING_COPY_STATUS',
-          status: 'syncing',
+          status: 'synced',
         })
-        if (timeoutId) {
-          clearTimeout(timeoutId)
-        }
-        timeoutId = setTimeout(() => {
-          dispatch({
-            type: 'UPDATE_ARTICLE_WORKING_COPY_STATUS',
-            status: 'synced',
-          })
-        }, 4000)
-
-        updateArticleStructureAndStats({ text: yText.toString() })
-      })
+      }, 4000)
+      updateArticleStructureAndStats({ text: yText.toString() })
+    }
+    updateArticleStructureAndStats({ text: yText.toString() })
+    yText.observe(onYTextChange)
+    /* Without this cleanup, every rerun of the effect (e.g. version switch,
+       editor remount) added another observer and they piled up — each yText
+       edit then fan-fired N dispatches, throttled writes, and `toString()`
+       calls, which is a plausible cause of the preview→write freeze. */
+    return () => {
+      yText.unobserve(onYTextChange)
+      if (timeoutId) {
+        clearTimeout(timeoutId)
+      }
     }
   }, [articleId, versionId, yText])
 

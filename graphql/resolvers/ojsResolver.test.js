@@ -278,6 +278,240 @@ describe('ojs resolver', () => {
     sectionMock.mock.restore()
   })
 
+  test('import includes scheduled (future issue) submissions, still skips queued', async () => {
+    // PKPSubmission::STATUS_SCHEDULED = 5: assigned to an unpublished issue;
+    // STATUS_PUBLISHED = 3. Queued drafts remain excluded.
+    const mockIssueMetadata = {
+      id: 1001,
+      title: { en_US: 'Future Issue' },
+      description: { en_US: 'd' },
+      sections: [{ id: 1, title: { en_US: 'Articles' } }],
+    }
+    const mockSubmissions = [
+      {
+        id: 200,
+        status: 1,
+        statusLabel: 'Queued',
+        title: { en_US: 'Draft only' },
+        publications: [{ id: 1, sectionId: 1, seq: 0 }],
+      },
+      {
+        id: 201,
+        status: 5,
+        statusLabel: 'Scheduled',
+        title: { en_US: 'Scheduled article' },
+        publications: [{ id: 2, sectionId: 1, seq: 0 }],
+      },
+    ]
+    const metaMock = mock.method(
+      ojsHelper,
+      'getOjsIssueMetadata',
+      async () => mockIssueMetadata
+    )
+    const subMock = mock.method(
+      ojsHelper,
+      'getOjsIssueSubmissions',
+      async () => mockSubmissions
+    )
+    const fullPubMock = mock.method(
+      ojsHelper,
+      'getSubmissionWithFullPublication',
+      async (_instance, sub) => sub
+    )
+    const sectionMock = mock.method(
+      ojsHelper,
+      'getOjsSection',
+      async () => ({ id: 1, title: { en_US: 'Articles' }, seq: 0 })
+    )
+
+    const corpus = await OjsMutation.importCorpusFromOJS(
+      {},
+      { issueId: 1001, workspaceId: workspace.id, instance: 'staging' },
+      { user }
+    )
+
+    assert.equal(corpus.articles.length, 1)
+    assert.equal(corpus.articles[0].article.title, 'Scheduled article')
+
+    metaMock.mock.restore()
+    subMock.mock.restore()
+    fullPubMock.mock.restore()
+    sectionMock.mock.restore()
+  })
+
+  test('import sorts by (sectionSeq, publication.seq) even when /submissions returns unsorted scheduled rows', async () => {
+    // Mirrors the future-issue path: /issues/:id has no `articles` array, so
+    // submissions come from /submissions?issueIds[] in submission-id order
+    // (or whatever the backend returns), NOT pre-sorted by (section, seq) the
+    // way /issues/:id is. The importer must still produce TOC order based on
+    // the editor's per-issue section order and per-publication seq.
+    const mockIssueMetadata = {
+      id: 4242,
+      title: { en_US: 'Future TOC' },
+      description: { en_US: 'd' },
+      // Editor put Reviews (10) before Editorials (5).
+      sections: [
+        { id: 10, title: { en_US: 'Reviews' } },
+        { id: 5, title: { en_US: 'Editorials' } },
+      ],
+    }
+    // Submissions deliberately in submission-id order, NOT TOC order.
+    const mockSubmissions = [
+      {
+        id: 1,
+        status: 5,
+        title: { en_US: 'Editorial B' },
+        publications: [{ id: 11, sectionId: 5, seq: 1 }],
+      },
+      {
+        id: 2,
+        status: 5,
+        title: { en_US: 'Review B' },
+        publications: [{ id: 22, sectionId: 10, seq: 1 }],
+      },
+      {
+        id: 3,
+        status: 5,
+        title: { en_US: 'Editorial A' },
+        publications: [{ id: 33, sectionId: 5, seq: 0 }],
+      },
+      {
+        id: 4,
+        status: 5,
+        title: { en_US: 'Review A' },
+        publications: [{ id: 44, sectionId: 10, seq: 0 }],
+      },
+    ]
+    const metaMock = mock.method(
+      ojsHelper,
+      'getOjsIssueMetadata',
+      async () => mockIssueMetadata
+    )
+    const subMock = mock.method(
+      ojsHelper,
+      'getOjsIssueSubmissions',
+      async () => mockSubmissions
+    )
+    const fullPubMock = mock.method(
+      ojsHelper,
+      'getSubmissionWithFullPublication',
+      async (_instance, sub) => sub
+    )
+    const sectionMock = mock.method(
+      ojsHelper,
+      'getOjsSection',
+      async () => null
+    )
+
+    const corpus = await OjsMutation.importCorpusFromOJS(
+      {},
+      { issueId: 4242, workspaceId: workspace.id, instance: 'staging' },
+      { user }
+    )
+
+    // Sort the corpus the same way the corpus page does and verify the TOC
+    // order matches the editor's intent: Reviews first (per sections[]),
+    // then Editorials; within each section, seq=0 before seq=1.
+    const sorted = [...corpus.articles].sort((a, b) => {
+      if (a.sectionSeq !== b.sectionSeq) return a.sectionSeq - b.sectionSeq
+      return (a.seq ?? 0) - (b.seq ?? 0)
+    })
+    const titles = sorted.map((a) => a.article.title)
+    assert.deepEqual(titles, ['Review A', 'Review B', 'Editorial A', 'Editorial B'])
+
+    metaMock.mock.restore()
+    subMock.mock.restore()
+    fullPubMock.mock.restore()
+    sectionMock.mock.restore()
+  })
+
+  test('import preserves editor TOC order when scheduled publications all report seq=0', async () => {
+    // Some OJS deployments leave publications.seq = 0 for scheduled rows
+    // until publish time. The importer must still mirror the order in which
+    // /submissions returned them WITHIN a section (i.e. fall back to
+    // submission id, NOT global iteration counter that bleeds across
+    // sections).
+    const mockIssueMetadata = {
+      id: 5252,
+      title: { en_US: 'Future TOC, no seq' },
+      description: { en_US: 'd' },
+      sections: [
+        { id: 7, title: { en_US: 'Essays' } },
+        { id: 8, title: { en_US: 'Reviews' } },
+      ],
+    }
+    // Returned in submission-id order; all seq=0. Section 7 first per
+    // issueMetadata.sections; within each section, lower submission id wins.
+    const mockSubmissions = [
+      {
+        id: 100,
+        status: 5,
+        title: { en_US: 'Essay A' },
+        publications: [{ id: 1, sectionId: 7, seq: 0 }],
+      },
+      {
+        id: 101,
+        status: 5,
+        title: { en_US: 'Review A' },
+        publications: [{ id: 2, sectionId: 8, seq: 0 }],
+      },
+      {
+        id: 102,
+        status: 5,
+        title: { en_US: 'Essay B' },
+        publications: [{ id: 3, sectionId: 7, seq: 0 }],
+      },
+    ]
+    const metaMock = mock.method(
+      ojsHelper,
+      'getOjsIssueMetadata',
+      async () => mockIssueMetadata
+    )
+    const subMock = mock.method(
+      ojsHelper,
+      'getOjsIssueSubmissions',
+      async () => mockSubmissions
+    )
+    const fullPubMock = mock.method(
+      ojsHelper,
+      'getSubmissionWithFullPublication',
+      async (_instance, sub) => sub
+    )
+    const sectionMock = mock.method(
+      ojsHelper,
+      'getOjsSection',
+      async () => null
+    )
+
+    const corpus = await OjsMutation.importCorpusFromOJS(
+      {},
+      { issueId: 5252, workspaceId: workspace.id, instance: 'staging' },
+      { user }
+    )
+
+    // Per (sectionSeq, seq): Essay A and Essay B must each have a unique
+    // seq within section 7 (no two articles tied at seq=0), and section 7
+    // sorts before section 8.
+    const bySection = new Map()
+    for (const a of corpus.articles) {
+      const k = String(a.section)
+      if (!bySection.has(k)) bySection.set(k, [])
+      bySection.get(k).push(a)
+    }
+    const essays = bySection.get('7') ?? []
+    const seqs = essays.map((a) => a.seq).sort((a, b) => a - b)
+    assert.deepEqual(
+      seqs,
+      [0, 1],
+      'two essays in section 7 must get distinct in-section seq values'
+    )
+
+    metaMock.mock.restore()
+    subMock.mock.restore()
+    fullPubMock.mock.restore()
+    sectionMock.mock.restore()
+  })
+
   test('import dedupes duplicate submissions, preferring currentPublicationId', async () => {
     // Two entries in issue.articles share the same submission id (the
     // editor staged a draft publication while the published one is still

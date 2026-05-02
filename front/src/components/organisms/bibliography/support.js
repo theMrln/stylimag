@@ -156,11 +156,20 @@ async function uploadImageToBackend(file, { articleId } = {}) {
   if (articleId) {
     formData.append('articleId', articleId)
   }
+  /* Stylo auth is JWT-Bearer (read from `localStorage.sessionToken` and sent
+     on every GraphQL call in `helpers/graphQL.js`), not cookies. The /assets
+     route is gated by the same `populateUserFromJWT` middleware, so we MUST
+     send the Bearer header here too — otherwise graphql replies 401 even
+     though the cookie is sent and the user is logged in. */
+  const sessionToken = localStorage.getItem('sessionToken')
   const response = await fetch(
     `${applicationConfig.backendEndpoint}/assets/images`,
     {
       method: 'POST',
       credentials: 'include',
+      headers: sessionToken
+        ? { Authorization: `Bearer ${sessionToken}` }
+        : undefined,
       body: formData,
     }
   )

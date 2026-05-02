@@ -146,18 +146,90 @@ describe('ojs helper', () => {
       assert.deepEqual(result, mockArticles)
     })
 
-    test('returns empty array when no articles', async () => {
-      global.fetch.mock.mockImplementation(async () => ({
-        ok: true,
-        json: async () => ({
-          id: 123,
-          title: { en_US: 'Empty Issue' },
-        }),
-      }))
+    test('returns empty array when no embedded articles and submissions list empty', async () => {
+      let calls = 0
+      global.fetch.mock.mockImplementation(async (url) => {
+        calls++
+        const u = String(url)
+        if (u.includes('/issues/')) {
+          return {
+            ok: true,
+            json: async () => ({
+              id: 123,
+              title: { en_US: 'Empty Issue' },
+            }),
+          }
+        }
+        if (u.includes('/submissions?') && u.includes('issueIds')) {
+          return {
+            ok: true,
+            json: async () => ({ items: [] }),
+          }
+        }
+        throw new Error(`unexpected fetch url: ${u}`)
+      })
 
       const result = await ojsHelper.getOjsIssueSubmissions('production', 123)
 
       assert.deepEqual(result, [])
+      assert.equal(calls, 2)
+    })
+
+    test('falls back to /submissions?issueIds when issue has no articles array', async () => {
+      let calls = 0
+      global.fetch.mock.mockImplementation(async (url) => {
+        calls++
+        const u = String(url)
+        if (u.includes('/issues/88')) {
+          return {
+            ok: true,
+            json: async () => ({
+              id: 88,
+              title: { en_US: 'Future Issue' },
+            }),
+          }
+        }
+        if (u.includes('/submissions?') && u.includes('issueIds')) {
+          assert.match(u, /issueIds%5B%5D=88|issueIds\[\]=88/)
+          return {
+            ok: true,
+            json: async () => ({
+              items: [
+                { id: 500, status: 5, title: { en_US: 'Scheduled submission' } },
+              ],
+            }),
+          }
+        }
+        throw new Error(`unexpected fetch url: ${u}`)
+      })
+
+      const result = await ojsHelper.getOjsIssueSubmissions('staging', 88)
+
+      assert.equal(result.length, 1)
+      assert.equal(result[0].id, 500)
+      assert.equal(result[0].status, 5)
+      assert.equal(calls, 2)
+    })
+
+    test('uses issueData option to avoid a second GET /issues when articles missing', async () => {
+      global.fetch.mock.mockImplementation(async (url) => {
+        const u = String(url)
+        assert.ok(u.includes('/submissions?') && u.includes('issueIds'))
+        return {
+          ok: true,
+          json: async () => ({
+            items: [{ id: 42, status: 3, title: { en_US: 'From list' } }],
+          }),
+        }
+      })
+
+      const result = await ojsHelper.getOjsIssueSubmissions('staging', 7, {
+        issueData: { id: 7, title: { en_US: 'Preloaded' } },
+      })
+
+      assert.equal(result.length, 1)
+      assert.equal(result[0].id, 42)
+      assert.equal(global.fetch.mock.callCount(), 1)
     })
   })
 

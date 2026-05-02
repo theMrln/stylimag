@@ -13,6 +13,19 @@ const { NotAuthenticatedError, NotFoundError } = require('../helpers/errors')
 const Y = require('yjs')
 const { logger } = require('../logger')
 
+// PKPSubmission submission.status (pkp-lib): Published and Scheduled are both
+// assigned to an issue for the public/future TOC. Queued (1) is in-workflow.
+const OJS_SUBMISSION_STATUS_PUBLISHED = 3
+const OJS_SUBMISSION_STATUS_SCHEDULED = 5
+
+function ojsSubmissionIsImportableForIssue(status) {
+  const n = Number(status)
+  return (
+    n === OJS_SUBMISSION_STATUS_PUBLISHED ||
+    n === OJS_SUBMISSION_STATUS_SCHEDULED
+  )
+}
+
 /**
  * Build name-match keys for an OJS-shaped author. Each returned key is
  * `family|given` with both parts trimmed and lower-cased. We emit the
@@ -232,7 +245,8 @@ module.exports = {
       // The issue metadata might have "articles" array which contains the submissions
       const submissions = await ojsHelper.getOjsIssueSubmissions(
         instance,
-        issueId
+        issueId,
+        { issueData: issueMetadata }
       )
 
       logger.info(
@@ -293,22 +307,25 @@ module.exports = {
       }
       const firstAppearanceSeqById = new Map()
 
-      // 4a. Skip unpublished submissions. OJS' /issues/:id endpoint, when
-      // called with an editor-level API token, returns ALL submissions
+      // 4a. Skip in-workflow / non-TOC submissions. OJS' /issues/:id endpoint,
+      // when called with an editor-level API token, returns ALL submissions
       // assigned to the issue, including queued drafts (status=1) that
       // readers never see on the public issue page. Importing those is
       // what causes phantom sections (e.g. a draft tied to a section that
       // isn't in issueMetadata.sections) and what looks like a "duplicate"
       // article when a published submission has a parallel draft attached
-      // to the same issue. OJS' STATUS_PUBLISHED is 3.
-      const publishedSubmissions = []
+      // to the same issue. We import STATUS_PUBLISHED (3) and
+      // STATUS_SCHEDULED (5): the latter is used for articles in a future
+      // issue before it goes live; without it, a "future issue" import would
+      // create an empty corpus.
+      const importableSubmissions = []
       for (const submission of submissions) {
         const status = submission?.status
-        if (status === 3) {
-          publishedSubmissions.push(submission)
+        if (ojsSubmissionIsImportableForIssue(status)) {
+          importableSubmissions.push(submission)
         } else {
           logger.warn(
-            `OJS import: skipping unpublished submission ${submission?.id} (status=${status}, label=${submission?.statusLabel ?? 'unknown'}); only status=3 (Published) is imported`
+            `OJS import: skipping submission ${submission?.id} (status=${status}, label=${submission?.statusLabel ?? 'unknown'}); only Published (3) and Scheduled (5) are imported`
           )
         }
       }
@@ -322,7 +339,7 @@ module.exports = {
       // the rogue draft in OJS.
       const seenSubmissionIds = new Map()
       const dedupedSubmissions = []
-      for (const submission of publishedSubmissions) {
+      for (const submission of importableSubmissions) {
         const subId =
           submission?.id ??
           submission?.submissionId ??
@@ -370,16 +387,103 @@ module.exports = {
         }
       }
 
-      // 5. Create Articles (each submission enriched with full publication for authors etc.)
-      // We do NOT seed `order` here: that field is reserved for the user's
-      // manual drag-and-drop reorders. Initialising it from iteration index
-      // would shadow `seq` and re-introduce submission-order sorting.
-      // `seqFallback` is only used when a publication is missing seq.
-      let seqFallback = 0
+      // 5. Enrich every submission with its full publication BEFORE we start
+      // creating articles. We need section/seq from the full publication to
+      // sort the list, and OJS' /issues/:id pre-sort isn't available on the
+      // /submissions fallback path used for unpublished/future issues.
+      const enrichedSubmissions = await Promise.all(
+        dedupedSubmissions.map((submission) =>
+          ojsHelper.getSubmissionWithFullPublication(instance, submission)
+        )
+      )
+
+      // 5b. Sort by (per-issue sectionSeq, publication.seq, submission id).
+      // This mirrors how OJS pre-sorts the /issues/:id articles array, so
+      // the corpus order matches the editor's TOC even when we got the
+      // submissions list via /submissions?issueIds[] (future issues).
+      // Number(...) coerces string seq values some OJS versions emit; the
+      // PUB_SEQ_MISSING sentinel pushes anything without a usable seq to
+      // the end of the section.
+      const PUB_SEQ_MISSING = Number.MAX_SAFE_INTEGER
+      const toFiniteNumber = (v) => {
+        if (typeof v === 'number') return Number.isFinite(v) ? v : null
+        if (typeof v === 'string') {
+          const n = Number(v)
+          return Number.isFinite(n) ? n : null
+        }
+        return null
+      }
+      const sortKeyFor = (s) => {
+        const pub = s?.publications?.[0]
+        const sectionObj = pub?.section
+        const sectionId =
+          pub?.sectionId ??
+          (typeof sectionObj === 'object' && sectionObj !== null
+            ? sectionObj.id
+            : sectionObj)
+        const sectionKey = sectionId != null ? String(sectionId) : ''
+        const sectionSeq =
+          sectionKey && issueSectionSeqById.has(sectionKey)
+            ? issueSectionSeqById.get(sectionKey)
+            : Number.MAX_SAFE_INTEGER
+        const pubSeqNum = toFiniteNumber(pub?.seq)
+        const pubSeq = pubSeqNum != null ? pubSeqNum : PUB_SEQ_MISSING
+        const subId =
+          toFiniteNumber(s?.id) ?? Number.MAX_SAFE_INTEGER
+        return [sectionSeq, pubSeq, subId]
+      }
+
+      // Pre-sort dump: useful when TOC order doesn't match what we expect.
+      // Includes raw publication.seq (so we can see if OJS even returned it),
+      // dateSubmitted (a defensible fallback), and the sectionId.
+      logger.info(
+        `OJS import: enriched submissions BEFORE sort (n=${enrichedSubmissions.length}): ${JSON.stringify(
+          enrichedSubmissions.map((s) => {
+            const pub = s?.publications?.[0]
+            return {
+              submissionId: s?.id,
+              currentPublicationId: s?.currentPublicationId,
+              publicationId: pub?.id,
+              pubSeq: pub?.seq ?? null,
+              pubSeqType: pub?.seq != null ? typeof pub.seq : null,
+              sectionId: pub?.sectionId ?? null,
+              dateSubmitted: s?.dateSubmitted ?? null,
+              datePublished: pub?.datePublished ?? s?.datePublished ?? null,
+              status: s?.status,
+            }
+          })
+        )}`
+      )
+
+      enrichedSubmissions.sort((a, b) => {
+        const ka = sortKeyFor(a)
+        const kb = sortKeyFor(b)
+        return ka[0] - kb[0] || ka[1] - kb[1] || ka[2] - kb[2]
+      })
+
+      logger.info(
+        `OJS import: sort order AFTER sort: ${JSON.stringify(
+          enrichedSubmissions.map((s) => ({
+            submissionId: s?.id,
+            sortKey: sortKeyFor(s),
+            title: extractArticleTitle(s),
+          }))
+        )}`
+      )
+
+      // 5c. Create Articles. We do NOT seed `order` here: that field is
+      // reserved for the user's manual drag-and-drop reorders. The corpus
+      // `seq` is the within-section index after the sort above (0..N-1).
+      // Using a per-section counter (instead of trusting publication.seq
+      // verbatim) is what makes the future-issue path correct: scheduled
+      // publications often all report seq=0, which would tie every article
+      // together at display time. The values still round-trip cleanly when
+      // pushed back via pushCorpusArticleOrderToOJS, which recomputes
+      // 0..N-1 per section from display order.
+      const seqBySection = new Map()
       const sectionMetaCache = new Map()
-      for (const submission of dedupedSubmissions) {
-        const submissionWithPublication =
-          await ojsHelper.getSubmissionWithFullPublication(instance, submission)
+      for (const submissionWithPublication of enrichedSubmissions) {
+        const submission = submissionWithPublication
 
         logger.info(
           `OJS submission keys: ${Object.keys(submissionWithPublication || {}).join(', ')}`
@@ -461,10 +565,9 @@ module.exports = {
             : firstAppearanceSeqById.get(sectionKey)
           : null
 
-        const seq =
-          typeof publication?.seq === 'number'
-            ? publication.seq
-            : seqFallback++
+        const seqKey = sectionKey || ''
+        const seq = seqBySection.get(seqKey) ?? 0
+        seqBySection.set(seqKey, seq + 1)
 
         // Prominently log the (submission, publication, section, title)
         // tuple so duplicates and section-order issues are easy to chase

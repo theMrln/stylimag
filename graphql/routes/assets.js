@@ -44,41 +44,6 @@ const DEFAULT_EXPORT_MIME_BY_FORMAT = {
   other: 'application/octet-stream',
 }
 
-/**
- * Returns true when `user` is allowed to read `asset`.
- *
- * Rules:
- *  - asset owner can always read
- *  - if the asset has an `article`, any contributor or owner of that article can read
- */
-async function canReadAsset(user, asset) {
-  if (!user) {
-    return false
-  }
-  const userId = user._id?.toString() || user.id?.toString()
-  if (asset.owner?.toString() === userId) {
-    return true
-  }
-  if (asset.article) {
-    const article = await Article.findById(asset.article)
-      .select({ owner: 1, contributors: 1 })
-      .lean()
-    if (!article) {
-      return false
-    }
-    if (article.owner?.toString() === userId) {
-      return true
-    }
-    if (
-      Array.isArray(article.contributors) &&
-      article.contributors.some((c) => c?.user?.toString() === userId)
-    ) {
-      return true
-    }
-  }
-  return false
-}
-
 function requireAuthenticated(req, res, next) {
   if (!req.user) {
     return res.status(401).json({ error: 'Authentication required' })
@@ -238,9 +203,25 @@ function createAssetsRouter() {
     }
   )
 
+  /*
+   * Image GET is intentionally unauthenticated.
+   *
+   * Reason: the resulting URL is embedded in markdown as a plain
+   * `![alt](/assets/images/<id>)` and rendered by the browser as a regular
+   * `<img>` tag — and `<img>` requests cannot carry an `Authorization`
+   * header. Stylo's local-strategy login uses passport with `session: false`
+   * (see `graphql/auth/local.js`), so there is no session cookie to ride
+   * along either; gating GET behind auth would simply break in-app preview
+   * for any local-auth user.
+   *
+   * Access control is therefore "unguessable URL": the id is a 24-char
+   * Mongo ObjectId. This matches the model commonly used by image hosts
+   * (Imgur, Google Photos sharing links, etc.). Anyone with the URL — i.e.
+   * anyone the article has been shared with via its markdown — can read
+   * the image. POST (upload) and DELETE remain authenticated.
+   */
   router.get(
     '/images/:id',
-    requireAuthenticated,
     requireStorageConfigured,
     async (req, res, next) => {
       try {
@@ -252,16 +233,16 @@ function createAssetsRouter() {
         if (!asset || asset.deletedAt) {
           return res.status(404).json({ error: 'Asset not found' })
         }
-        const allowed = await canReadAsset(req.user, asset)
-        if (!allowed) {
-          return res.status(403).json({ error: 'Forbidden' })
-        }
         const obj = await storage.getObject(asset.storageKey)
         res.setHeader('Content-Type', asset.mimeType)
         if (asset.size) {
           res.setHeader('Content-Length', String(asset.size))
         }
-        res.setHeader('Cache-Control', 'private, max-age=3600')
+        /* `public` instead of `private` since the endpoint is unauthenticated;
+           one hour is a balance between bandwidth on previews and recovery
+           after an asset is replaced (currently same id => same bytes thanks
+           to sha256 dedup, so caching is safe). */
+        res.setHeader('Cache-Control', 'public, max-age=3600')
         if (obj.Body && typeof obj.Body.pipe === 'function') {
           obj.Body.pipe(res)
           obj.Body.on('error', next)

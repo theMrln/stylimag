@@ -122,12 +122,28 @@
   text-align-last: center;
 }
 
-/* Abstract in header stays left-aligned for readability, override header center */
-.stylo-preview-imaginations .preview-metadata-header .abstract {
+/* Abstracts: EN and FR sit side by side in a horizontal flexbox.
+   The per-column `flex-grow` is set inline (proportional to character
+   count) so widths flex such that both columns end at roughly the same
+   line — i.e. tops and bottoms align. */
+.stylo-preview-imaginations .preview-metadata-header .abstracts {
+  display: flex;
+  flex-direction: row;
+  gap: 1.5rem;
+  align-items: stretch;
+  text-align: left;
+  margin-top: 1rem;
+}
+
+.stylo-preview-imaginations .preview-metadata-header .abstracts .abstract {
+  /* `flex` is set inline (grow ∝ length); `min-width: 0` lets the column
+     shrink below its content's intrinsic min-width so the proportional
+     widths actually take effect. */
+  min-width: 0;
   text-align: left;
 }
 
-.stylo-preview-imaginations .preview-metadata-header .abstract p {
+.stylo-preview-imaginations .preview-metadata-header .abstracts .abstract p {
   text-align: left;
 }
 

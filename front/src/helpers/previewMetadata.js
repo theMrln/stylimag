@@ -130,13 +130,30 @@ export function buildPreviewMetadataHeader(metadata) {
     parts.push(`<div class="author preview-lang-fr">${authorPs}</div>`)
   }
 
+  /* Wrap both abstracts in a flex container so the EN and FR columns sit
+     side by side. The wrapper is always emitted when at least one abstract
+     exists; CSS handles the single-column case gracefully.
+
+     Column widths are made proportional to the character count of each
+     abstract via inline `flex-grow`. For a column of width W holding
+     N characters, rendered height ≈ N / W (in lines), so setting
+     flex-grow ∝ N keeps the rendered heights of the two columns
+     approximately equal — i.e. the columns line up at top *and* bottom. */
+  const abstractParts = []
   if (abstractEn) {
-    parts.push(`<div class="abstract preview-lang-en"><p>${escapeHtml(abstractEn)}</p></div>`)
+    const grow = Math.max(1, abstractEn.length)
+    abstractParts.push(
+      `<div class="abstract preview-lang-en" style="flex: ${grow} 1 0"><p>${escapeHtml(abstractEn)}</p></div>`
+    )
   }
-  if (abstractFr && abstractFr !== abstractEn) {
-    parts.push(`<div class="abstract preview-lang-fr"><p>${escapeHtml(abstractFr)}</p></div>`)
-  } else if (abstractFr) {
-    parts.push(`<div class="abstract preview-lang-fr"><p>${escapeHtml(abstractFr)}</p></div>`)
+  if (abstractFr) {
+    const grow = Math.max(1, abstractFr.length)
+    abstractParts.push(
+      `<div class="abstract preview-lang-fr" style="flex: ${grow} 1 0"><p>${escapeHtml(abstractFr)}</p></div>`
+    )
+  }
+  if (abstractParts.length > 0) {
+    parts.push(`<div class="abstracts">${abstractParts.join('')}</div>`)
   }
 
   if (parts.length === 0) return ''

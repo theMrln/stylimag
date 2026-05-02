@@ -68,13 +68,47 @@ async function getOjsIssueMetadata(instance, issueId) {
 }
 
 /**
- * Get submissions for a specific issue (OJS 3.x: issue response may include articles).
+ * List submissions linked to an issue via OJS REST (OJS 3.4+).
+ * Unpublished / future issues often omit `articles` on GET /issues/:id; this
+ * endpoint still returns assigned submissions when using an editor API token.
  * @param {'staging'|'production'} instance
- * @param {number} issueId
+ * @param {number|string} issueId
  */
-async function getOjsIssueSubmissions(instance, issueId) {
-  const issueData = await getOjsIssueMetadata(instance, issueId)
-  return issueData.articles || []
+async function getOjsSubmissionsForIssue(instance, issueId) {
+  const id = encodeURIComponent(String(issueId))
+  const data = await fetchOjs(
+    instance,
+    `/submissions?issueIds[]=${id}&count=500`
+  )
+  const items = data?.items
+  return Array.isArray(items) ? items : []
+}
+
+/**
+ * Get submissions for a specific issue (OJS 3.x: issue `articles` when present).
+ * Falls back to GET /submissions?issueIds[]=… when the issue payload has no
+ * embedded articles (common for unpublished or future-dated issues).
+ *
+ * @param {'staging'|'production'} instance
+ * @param {number|string} issueId
+ * @param {{ issueData?: object }} [options] - Pass `issueData` from a prior
+ *   GET /issues/:id to avoid a duplicate request.
+ */
+async function getOjsIssueSubmissions(instance, issueId, options = {}) {
+  const issueData =
+    options.issueData != null
+      ? options.issueData
+      : await getOjsIssueMetadata(instance, issueId)
+
+  const embedded = issueData?.articles
+  if (Array.isArray(embedded) && embedded.length > 0) {
+    return embedded
+  }
+
+  logger.info(
+    `OJS issue ${issueId}: no embedded articles on issue payload; loading submissions via /submissions?issueIds[]`
+  )
+  return getOjsSubmissionsForIssue(instance, issueId)
 }
 
 /**
