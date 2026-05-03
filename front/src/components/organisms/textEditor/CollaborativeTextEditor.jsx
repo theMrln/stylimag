@@ -3,8 +3,9 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Helmet } from 'react-helmet-async'
 import { useTranslation } from 'react-i18next'
 import { shallowEqual, useDispatch, useSelector } from 'react-redux'
+import { toast } from 'react-toastify'
 import { MonacoBinding } from 'y-monaco'
-import { Upload } from 'lucide-react'
+import { FolderUp, Upload } from 'lucide-react'
 
 import {
   MarkdownMenu,
@@ -30,7 +31,12 @@ import { useLitePreview } from '../../../hooks/lite-preview.js'
 import { applicationConfig } from '../../../config.js'
 import { buildPreviewWithMetadataHeader } from '../../../helpers/previewMetadata.js'
 import defaultEditorOptions from '../monaco/options.js'
-import { onDropIntoEditor, importMarkdownContent, readFileAsText } from '../bibliography/support.js'
+import {
+  onDropIntoEditor,
+  importMarkdownContent,
+  processMarkdownImageLinks,
+  readFileAsText,
+} from '../bibliography/support.js'
 import previewImaginationsCss from '../../../styles/preview-imaginations.css?raw'
 
 import Alert from '../../molecules/Alert.jsx'
@@ -70,7 +76,11 @@ export default function CollaborativeTextEditor({
   // Markdown import state
   const importModal = useModal()
   const [pendingImportFile, setPendingImportFile] = useState(null)
+  const [pendingCompanionFiles, setPendingCompanionFiles] = useState([])
+  const [importProcessing, setImportProcessing] = useState(false)
+  const [importProgress, setImportProgress] = useState(null)
   const fileInputRef = useRef(null)
+  const folderInputRef = useRef(null)
   const [previewStyle, setPreviewStyle] = useState('imaginations') // 'imaginations' | 'standard'
   const [previewEngine, setPreviewEngine] = useState(() =>
     resolvePreviewEngine()
@@ -192,49 +202,165 @@ export default function CollaborativeTextEditor({
   )
 
   // Handle markdown file dropped or selected
-  const handleMarkdownFile = useCallback((file) => {
-    setPendingImportFile(file)
-    importModal.show()
-  }, [importModal])
+  const handleMarkdownFile = useCallback(
+    (file, companions = []) => {
+      setPendingImportFile(file)
+      setPendingCompanionFiles(companions)
+      setImportProgress(null)
+      setImportProcessing(false)
+      importModal.show()
+    },
+    [importModal]
+  )
 
-  // Handle import confirmation from modal
-  const handleImportConfirm = useCallback(async (mode) => {
-    if (!pendingImportFile || !editorRef.current) return
+  // Handle import confirmation from modal. Image links inside the markdown
+  // are persisted upfront — before applying the edit — so the editor only
+  // ever sees stable platform URLs. We keep the modal open during the
+  // upload phase so the user gets progress feedback; the final
+  // `executeEdits` runs after the modal closes (otherwise the surrounding
+  // document is inert and `editor.focus()` is silently dropped).
+  const handleImportConfirm = useCallback(
+    async (mode) => {
+      if (!pendingImportFile || !editorRef.current) return
 
-    // Close the modal BEFORE applying edits: while the dialog is open the rest
-    // of the document is inert, which would block focus from returning to the
-    // editor and silently break a follow-up `editor.focus()` / cursor move.
-    const file = pendingImportFile
-    setPendingImportFile(null)
-    importModal.close()
+      const file = pendingImportFile
+      const companions = pendingCompanionFiles
+      setImportProcessing(true)
+      setImportProgress({
+        processed: 0,
+        total: 0,
+        uploaded: 0,
+        failed: 0,
+        skipped: 0,
+      })
 
-    try {
-      const content = await readFileAsText(file)
-      importMarkdownContent(editorRef.current, content, mode)
-    } catch (error) {
-      console.error('Failed to import markdown file:', error)
-    }
-  }, [pendingImportFile, importModal])
+      let finalContent = ''
+      let summary = null
+      try {
+        const raw = await readFileAsText(file)
+        summary = await processMarkdownImageLinks(raw, {
+          articleId,
+          files: companions,
+          onProgress: setImportProgress,
+        })
+        finalContent = summary.content
+        if (summary.failed > 0) {
+          console.warn(
+            `Markdown import: ${summary.failed}/${summary.total} image link(s) failed to upload; original URL kept.`
+          )
+        }
+      } catch (error) {
+        console.error('Failed to import markdown file:', error)
+        setImportProcessing(false)
+        return
+      }
+
+      setPendingImportFile(null)
+      setPendingCompanionFiles([])
+      setImportProcessing(false)
+      setImportProgress(null)
+      importModal.close()
+
+      try {
+        importMarkdownContent(editorRef.current, finalContent, mode)
+      } catch (error) {
+        console.error('Failed to apply imported markdown to editor:', error)
+      }
+
+      if (summary) {
+        const { uploaded, failed, unresolved, unresolvedSamples } = summary
+        if (uploaded > 0) {
+          toast(tCommon('markdownImport.toastUploaded', { count: uploaded }), {
+            type: 'success',
+          })
+        }
+        if (unresolved > 0) {
+          const sample = unresolvedSamples.slice(0, 3).join(', ')
+          toast(
+            tCommon('markdownImport.toastUnresolved', {
+              count: unresolved,
+              sample,
+            }),
+            { type: 'warning', autoClose: 8000 }
+          )
+        }
+        if (failed > 0) {
+          toast(tCommon('markdownImport.toastFailed', { count: failed }), {
+            type: 'error',
+          })
+        }
+      }
+    },
+    [pendingImportFile, pendingCompanionFiles, articleId, importModal, tCommon]
+  )
 
   // Handle modal close
   const handleImportModalClose = useCallback(() => {
+    if (importProcessing) return
     setPendingImportFile(null)
+    setPendingCompanionFiles([])
+    setImportProgress(null)
     importModal.close()
-  }, [importModal])
+  }, [importModal, importProcessing])
 
-  // Handle file input change (toolbar button)
-  const handleFileInputChange = useCallback((event) => {
-    const file = event.target.files?.[0]
-    if (file) {
-      handleMarkdownFile(file)
-    }
-    // Reset input so same file can be selected again
-    event.target.value = ''
-  }, [handleMarkdownFile])
+  // Handle file input change (toolbar button). The picker accepts multiple
+  // files so the user can select a markdown together with the images it
+  // references (resolved via relative path).
+  const handleFileInputChange = useCallback(
+    (event) => {
+      const fileList = Array.from(event.target.files ?? [])
+      const markdown = fileList.find(
+        (f) =>
+          f.name.toLowerCase().endsWith('.md') ||
+          f.name.toLowerCase().endsWith('.markdown') ||
+          f.name.toLowerCase().endsWith('.txt')
+      )
+      if (markdown) {
+        const companions = fileList.filter((f) => f !== markdown)
+        handleMarkdownFile(markdown, companions)
+      }
+      event.target.value = ''
+    },
+    [handleMarkdownFile]
+  )
 
-  // Trigger file input click
+  // Handle folder input change. Shallowest markdown wins so an article
+  // packaged as `MyArticle/article.md + media/*` is detected even if the
+  // user picks the parent directory.
+  const handleFolderInputChange = useCallback(
+    (event) => {
+      const fileList = Array.from(event.target.files ?? [])
+      const markdownCandidates = fileList.filter(
+        (f) =>
+          f.name.toLowerCase().endsWith('.md') ||
+          f.name.toLowerCase().endsWith('.markdown') ||
+          f.name.toLowerCase().endsWith('.txt')
+      )
+      if (markdownCandidates.length === 0) {
+        toast(tCommon('markdownImport.toastNoMarkdownInFolder'), {
+          type: 'warning',
+        })
+        event.target.value = ''
+        return
+      }
+      const markdown = markdownCandidates.sort((a, b) => {
+        const da = (a.webkitRelativePath || a.name).split('/').length
+        const db = (b.webkitRelativePath || b.name).split('/').length
+        return da - db
+      })[0]
+      const companions = fileList.filter((f) => f !== markdown)
+      handleMarkdownFile(markdown, companions)
+      event.target.value = ''
+    },
+    [handleMarkdownFile, tCommon]
+  )
+
   const handleImportButtonClick = useCallback(() => {
     fileInputRef.current?.click()
+  }, [])
+
+  const handleImportFolderClick = useCallback(() => {
+    folderInputRef.current?.click()
   }, [])
 
   const handleCollaborativeEditorDidMount = useCallback(
@@ -362,6 +488,9 @@ export default function CollaborativeTextEditor({
       <CollaborativeEditorArticleHeader
         articleTitle={article.title}
         versionId={versionId}
+        metadata={
+          hasVersion ? version?.metadata : article?.workingVersion?.metadata
+        }
       />
 
       <CollaborativeEditorWebSocketStatus
@@ -369,12 +498,34 @@ export default function CollaborativeTextEditor({
         status={websocketStatus}
       />
 
-      {/* Hidden file input for markdown import */}
+      {/* Hidden file input for markdown import. `multiple` so the user can
+          pick a markdown file together with the images it references via
+          relative paths — they'll be uploaded and rewritten before import. */}
       <input
         ref={fileInputRef}
         type="file"
-        accept=".md,.markdown,.txt"
+        accept=".md,.markdown,.txt,image/*"
+        multiple
         onChange={handleFileInputChange}
+        style={{ display: 'none' }}
+      />
+
+      {/* Hidden folder input — `webkitdirectory` is a non-standard DOM
+          attribute that React doesn't know about, so we set it on mount
+          via the ref to avoid an "unknown prop" warning. Lets the user
+          pick a whole article folder (markdown + assets) so relative
+          image links resolve against `webkitRelativePath`. */}
+      <input
+        ref={(el) => {
+          folderInputRef.current = el
+          if (el) {
+            el.setAttribute('webkitdirectory', '')
+            el.setAttribute('directory', '')
+          }
+        }}
+        type="file"
+        multiple
+        onChange={handleFolderInputChange}
         style={{ display: 'none' }}
       />
 
@@ -382,11 +533,14 @@ export default function CollaborativeTextEditor({
       <MarkdownImportModal
         bindings={importModal.bindings}
         file={pendingImportFile}
+        companionFiles={pendingCompanionFiles}
+        processing={importProcessing}
+        progress={importProgress}
         onImport={handleImportConfirm}
         onClose={handleImportModalClose}
       />
 
-      {/* Import from file button - shown when in write mode and connected */}
+      {/* Import from file/folder buttons - shown in write mode when connected */}
       {mode === 'write' && !hasVersion && websocketStatus === 'connected' && (
         <div className={styles.editorToolbar}>
           <Button
@@ -397,6 +551,15 @@ export default function CollaborativeTextEditor({
           >
             <Upload size={16} />
             {tCommon('markdownImport.buttonText')}
+          </Button>
+          <Button
+            small
+            secondary
+            onClick={handleImportFolderClick}
+            title={tCommon('markdownImport.folderButtonTitle')}
+          >
+            <FolderUp size={16} />
+            {tCommon('markdownImport.folderButtonText')}
           </Button>
         </div>
       )}

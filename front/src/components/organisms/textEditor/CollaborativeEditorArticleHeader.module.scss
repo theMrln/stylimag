@@ -1,3 +1,5 @@
+@use '../../../styles/variables' as *;
+
 .header {
   margin-top: 1rem;
 }
@@ -8,6 +10,14 @@
   justify-items: center;
   gap: 0.5em;
   flex: 1;
+  margin-bottom: 0.125rem;
+}
+
+.authors {
+  margin: 0 0 0.5rem;
+  font-size: 0.875rem;
+  color: $muted-color;
+  font-style: italic;
 }
 
 .tocTooltip.empty {

@@ -26,6 +26,15 @@ const EXTENSION_BY_MIME = {
   'image/svg+xml': 'svg',
 }
 
+const MIME_BY_URL_EXTENSION = {
+  png: 'image/png',
+  jpg: 'image/jpeg',
+  jpeg: 'image/jpeg',
+  gif: 'image/gif',
+  webp: 'image/webp',
+  svg: 'image/svg+xml',
+}
+
 const ALLOWED_EXPORT_FORMATS = new Set([
   'html',
   'pdf',
@@ -194,6 +203,134 @@ function createAssetsRouter() {
           size,
           sha256,
           originalFilename: originalname,
+        })
+
+        return res.status(201).json(serializeAsset(asset))
+      } catch (err) {
+        return next(err)
+      }
+    }
+  )
+
+  /*
+   * Persist a remote image by fetching it server-side. Used by the markdown
+   * import flow to host external `![alt](https://…)` references on our own
+   * object storage without hitting CORS in the browser.
+   *
+   * Returns the same shape as `POST /images` so callers can treat both the
+   * same. Dedup by sha256 so importing a markdown that points to the same
+   * image twice (or repeatedly importing the same article) does not waste
+   * storage.
+   */
+  router.post(
+    '/images/from-url',
+    requireAuthenticated,
+    requireStorageConfigured,
+    express.json({ limit: '16kb' }),
+    async (req, res, next) => {
+      try {
+        const { url } = req.body || {}
+        if (typeof url !== 'string' || !/^https?:\/\//i.test(url)) {
+          return res
+            .status(400)
+            .json({ error: 'A valid http(s) url is required' })
+        }
+        const userId = req.user._id?.toString() || req.user.id?.toString()
+        const articleId =
+          typeof req.body?.articleId === 'string' &&
+          mongoose.isValidObjectId(req.body.articleId)
+            ? req.body.articleId
+            : null
+        if (articleId) {
+          const article = await Article.findById(articleId)
+            .select({ owner: 1, contributors: 1 })
+            .lean()
+          const isOwner = article?.owner?.toString() === userId
+          const isContributor =
+            Array.isArray(article?.contributors) &&
+            article.contributors.some((c) => c?.user?.toString() === userId)
+          if (!article || (!isOwner && !isContributor)) {
+            return res
+              .status(403)
+              .json({ error: 'Not allowed to upload to this article' })
+          }
+        }
+
+        const maxBytes = config.get('storage.maxUploadBytes')
+        let upstream
+        try {
+          upstream = await fetch(url, { redirect: 'follow' })
+        } catch (err) {
+          return res
+            .status(502)
+            .json({ error: `Unable to fetch ${url}: ${err.message}` })
+        }
+        if (!upstream.ok) {
+          return res
+            .status(502)
+            .json({ error: `Upstream returned ${upstream.status}` })
+        }
+        const declaredLength = Number(upstream.headers.get('content-length'))
+        if (declaredLength && declaredLength > maxBytes) {
+          return res
+            .status(413)
+            .json({ error: `Image exceeds max size of ${maxBytes} bytes` })
+        }
+        const ab = await upstream.arrayBuffer()
+        const buffer = Buffer.from(ab)
+        if (buffer.length > maxBytes) {
+          return res
+            .status(413)
+            .json({ error: `Image exceeds max size of ${maxBytes} bytes` })
+        }
+        const headerMime = (upstream.headers.get('content-type') || '')
+          .split(';')[0]
+          .trim()
+          .toLowerCase()
+        const extFromUrl = url
+          .split('?')[0]
+          .split('.')
+          .pop()
+          .toLowerCase()
+        const mimeType =
+          (headerMime && ALLOWED_IMAGE_MIME.has(headerMime) && headerMime) ||
+          MIME_BY_URL_EXTENSION[extFromUrl]
+        if (!mimeType || !ALLOWED_IMAGE_MIME.has(mimeType)) {
+          return res
+            .status(415)
+            .json({ error: `Unsupported image type: ${headerMime || extFromUrl || 'unknown'}` })
+        }
+
+        const sha256 = crypto.createHash('sha256').update(buffer).digest('hex')
+        const existing = await Asset.findOne({
+          owner: userId,
+          sha256,
+          deletedAt: null,
+          ...(articleId ? { article: articleId } : {}),
+        })
+        if (existing) {
+          return res.status(200).json(serializeAsset(existing))
+        }
+
+        const key = buildImageKey({
+          userId,
+          articleId,
+          sha256,
+          mimeType,
+        })
+        await storage.putObject({ key, body: buffer, contentType: mimeType })
+
+        const originalFilename = decodeURIComponent(
+          url.split('/').pop().split('?')[0] || ''
+        )
+        const asset = await Asset.create({
+          owner: userId,
+          article: articleId,
+          storageKey: key,
+          mimeType,
+          size: buffer.length,
+          sha256,
+          originalFilename,
         })
 
         return res.status(201).json(serializeAsset(asset))
