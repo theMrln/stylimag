@@ -88,26 +88,29 @@ mutation startBatchBuild($corpusId: ID!, $engine: PdfEngine = paged) {
   }
 }
 
-mutation startBuildCovers($corpusId: ID!) {
-  startBuildCovers(corpusId: $corpusId) {
+mutation startBuildCovers($corpusId: ID!, $engine: PdfEngine = paged) {
+  startBuildCovers(corpusId: $corpusId, engine: $engine) {
     ...basicPipelineJobFields
   }
 }
 
-mutation startBuildToc($corpusId: ID!) {
-  startBuildToc(corpusId: $corpusId) {
+mutation startBuildToc($corpusId: ID!, $engine: PdfEngine = paged) {
+  startBuildToc(corpusId: $corpusId, engine: $engine) {
     ...basicPipelineJobFields
   }
 }
 
-mutation startBuildFrontPage($corpusId: ID!) {
-  startBuildFrontPage(corpusId: $corpusId) {
+mutation startBuildFrontPage($corpusId: ID!, $engine: PdfEngine = paged) {
+  startBuildFrontPage(corpusId: $corpusId, engine: $engine) {
     ...basicPipelineJobFields
   }
 }
 
-mutation startBuildCompleteIssue($corpusId: ID!) {
-  startBuildCompleteIssue(corpusId: $corpusId) {
+mutation startBuildCompleteIssue(
+  $corpusId: ID!
+  $engine: PdfEngine = paged
+) {
+  startBuildCompleteIssue(corpusId: $corpusId, engine: $engine) {
     ...basicPipelineJobFields
   }
 }

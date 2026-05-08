@@ -5,10 +5,13 @@ const preflight = require('./lib/preflight')
 const {
   runArticlePdfJob,
   runBatchBuildJob,
-  makeNotImplementedRunner,
 } = require('./lib/build-article')
 const { runPageNumbersJob } = require('./lib/page-numbers')
 const { runStaticDeployJob } = require('./lib/run-static-deploy')
+const { runArticleCoverJob } = require('./lib/article-covers')
+const { runFrontPageJob } = require('./lib/front-page')
+const { runTocJob } = require('./lib/toc')
+const { runCompleteIssueJob } = require('./lib/complete-issue')
 
 const PORT = parseInt(process.env.PORT || '3070', 10)
 const AUTH_TOKEN = process.env.PIPELINE_AUTH_TOKEN || ''
@@ -41,10 +44,10 @@ const JOB_RUNNERS = {
   batch: runBatchBuildJob,
   'page-numbers': runPageNumbersJob,
   'static-deploy': runStaticDeployJob,
-  'article-cover': makeNotImplementedRunner('article-cover'),
-  toc: makeNotImplementedRunner('toc'),
-  'front-page': makeNotImplementedRunner('front-page'),
-  'complete-issue': makeNotImplementedRunner('complete-issue'),
+  'article-cover': runArticleCoverJob,
+  toc: runTocJob,
+  'front-page': runFrontPageJob,
+  'complete-issue': runCompleteIssueJob,
 }
 
 app.post('/jobs', requireToken, async (req, res) => {

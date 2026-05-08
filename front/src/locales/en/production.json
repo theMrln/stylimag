@@ -15,7 +15,7 @@
     "title": "Production",
     "titleWithName": "{{name}} — Production",
     "heading": "Production pipeline",
-    "intro": "Build per-article PDFs and follow the publishing pipeline. Issue-level artefacts (covers, TOC, complete-issue) and OJS push-back land in later phases.",
+    "intro": "Build per-article PDFs and assemble the issue: covers, TOC, front page, and a merged complete-issue PDF. Then push metadata back to OJS or deploy artefacts to a static host.",
     "crumbs": {
       "allCorpora": "all corpora"
     }
@@ -43,19 +43,19 @@
     },
     "covers": {
       "label": "Article cover pages",
-      "description": "Per-article cover pages. Renderer port pending — runs as a stub for now and surfaces the gap in the dashboard."
+      "description": "Per-article cover pages with title, authors, citation, DOI, and publication date."
     },
     "toc": {
       "label": "Table of contents",
-      "description": "TOC page. Renderer port pending."
+      "description": "Front-matter PDF (sectioned article list with page numbers) and a web index.html."
     },
     "frontPage": {
       "label": "Front page / front matter",
-      "description": "Cover + masthead artefact. Renderer port pending."
+      "description": "Issue cover + masthead PDF, with the alphabetised contributor list aggregated from every article."
     },
     "completeIssue": {
       "label": "Complete issue PDF",
-      "description": "Front page + TOC + every article PDF, merged. Renderer port pending."
+      "description": "Merge front-page + TOC + every article (with cover) into a single bound PDF. Build the parts first."
     }
   },
   "issueMetadata": {

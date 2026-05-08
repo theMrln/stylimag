@@ -47,7 +47,7 @@ export default function Production() {
       <p className={styles.intro}>
         {t(
           'page.intro',
-          'Build per-article PDFs and follow the publishing pipeline. Issue-level artefacts (covers, TOC, complete-issue) and OJS push-back land in later phases.'
+          'Build per-article PDFs and assemble the issue: covers, TOC, front page, and a merged complete-issue PDF. Then push metadata back to OJS or deploy artefacts to a static host.'
         )}
       </p>
 

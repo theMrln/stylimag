@@ -936,16 +936,20 @@ type Mutation {
   startBatchBuild(corpusId: ID!, engine: PdfEngine = paged): PipelineJob
 
   """Generate per-article cover pages for the corpus."""
-  startBuildCovers(corpusId: ID!): PipelineJob
+  startBuildCovers(corpusId: ID!, engine: PdfEngine = paged): PipelineJob
 
   """Generate the table of contents page for the corpus."""
-  startBuildToc(corpusId: ID!): PipelineJob
+  startBuildToc(corpusId: ID!, engine: PdfEngine = paged): PipelineJob
 
   """Generate the front-matter / front-page artefact for the corpus."""
-  startBuildFrontPage(corpusId: ID!): PipelineJob
+  startBuildFrontPage(corpusId: ID!, engine: PdfEngine = paged): PipelineJob
 
-  """Assemble the complete-issue PDF (front page + TOC + every article)."""
-  startBuildCompleteIssue(corpusId: ID!): PipelineJob
+  """
+  Assemble the complete-issue PDF by merging the corpus's existing
+  front-page, TOC, per-article cover, and per-article PDF artefacts in
+  reading order. Build those artefacts first.
+  """
+  startBuildCompleteIssue(corpusId: ID!, engine: PdfEngine = paged): PipelineJob
 
   """
   Rebuild the YAML frontmatter for an article from its workingVersion

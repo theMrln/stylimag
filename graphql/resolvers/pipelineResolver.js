@@ -161,6 +161,278 @@ async function loadAndRefreshJob(jobId) {
 }
 
 /**
+ * Build the `issue` payload that publishing-pipeline runners need.
+ *
+ * Stylimag stores OJS metadata under `corpus.metadata.ojs` (raw passthrough
+ * from the OJS import); editor-supplied fields live on `corpus.editors[]`
+ * and `corpus.imageCredit`. Imaginations' templates expect a flat shape
+ * with `title / volume / number / year / editors / imageCredit`, so we
+ * project both sources into that.
+ */
+function buildIssuePayload(corpus) {
+  const ojs = corpus?.metadata?.ojs || {}
+  const issueMeta = corpus?.metadata?.issue || {}
+  return {
+    title:
+      issueMeta.title ||
+      (typeof ojs.title === 'object' ? ojs.title : null) ||
+      ojs.title ||
+      corpus?.name ||
+      'Untitled issue',
+    volume: ojs.volume ?? issueMeta.volume ?? '',
+    number: ojs.number ?? issueMeta.number ?? '',
+    year: ojs.year ?? issueMeta.year ?? '',
+    editors: Array.isArray(corpus?.editors) ? corpus.editors : [],
+    imageCredit: corpus?.imageCredit || {},
+    journalTitle: ojs.journal_title || ojs.journalTitle || '',
+  }
+}
+
+/**
+ * Project an Article document into the shape the cover renderer expects.
+ * Tolerates both stylimag's camelCase OJS fields and locally-edited
+ * snake_case YAML fields.
+ */
+function buildArticleCoverPayload(article) {
+  const md = article?.workingVersion?.metadata || {}
+  return {
+    title: md.title ?? '',
+    authors: Array.isArray(md.authors) ? md.authors : [],
+    doi: md['pub-id::doi'] ?? md.doi ?? '',
+    datePublished: md.datePublished ?? md.date_published ?? '',
+    pages: md.pages ?? md.page_range ?? '',
+  }
+}
+
+function pickLocaleString(field, keys) {
+  if (field == null) return ''
+  if (typeof field === 'string') return field
+  if (typeof field !== 'object') return ''
+  for (const k of keys) {
+    const v = field[k]
+    if (typeof v === 'string' && v.trim()) return v.trim()
+  }
+  return ''
+}
+
+/**
+ * Format an article's authors into a "Given Family, Given Family, …"
+ * byline for the TOC.
+ */
+function formatAuthorsForToc(authors) {
+  if (!Array.isArray(authors) || authors.length === 0) return 'Unknown'
+  const sorted = [...authors].sort((a, b) => (a?.seq ?? 0) - (b?.seq ?? 0))
+  const names = sorted
+    .map((a) => {
+      const given = pickLocaleString(a?.givenName, ['en', 'en_US', 'fr_CA', 'fr'])
+      const family = pickLocaleString(a?.familyName, ['en', 'en_US', 'fr_CA', 'fr'])
+      return [given, family].filter(Boolean).join(' ').trim()
+    })
+    .filter(Boolean)
+  return names.length ? names.join(', ') : 'Unknown'
+}
+
+/**
+ * Group corpus articles into TOC sections preserving CorpusArticle order
+ * and using `sectionTitle` (already populated by OJS import). Each entry
+ * carries title / author / pages / start_page derived from the article's
+ * workingVersion metadata.
+ */
+function buildTocSections(corpus, tuples) {
+  const corpusArticleByArticleId = new Map()
+  for (const ca of corpus.articles || []) {
+    const id = String(ca.article?._id ?? ca.article ?? '')
+    if (id) corpusArticleByArticleId.set(id, ca)
+  }
+
+  // Walk in CorpusArticle.order so the TOC matches the corpus-page reorder.
+  const ordered = [...tuples].sort((a, b) => {
+    const oa = corpusArticleByArticleId.get(a.articleId)?.order ?? 0
+    const ob = corpusArticleByArticleId.get(b.articleId)?.order ?? 0
+    return oa - ob
+  })
+
+  const groups = new Map()
+  for (const { article, articleId } of ordered) {
+    const ca = corpusArticleByArticleId.get(articleId)
+    const sectionKey = String(
+      ca?.sectionTitle || ca?.section || 'uncategorised'
+    )
+    const sectionTitle = ca?.sectionTitle || 'Articles'
+    const sectionSeq = typeof ca?.sectionSeq === 'number' ? ca.sectionSeq : 999
+    let group = groups.get(sectionKey)
+    if (!group) {
+      group = { sectionSeq, section: { sectionTitle, articles: [] } }
+      groups.set(sectionKey, group)
+    }
+    const md = article.workingVersion?.metadata || {}
+    const title =
+      pickLocaleString(md.title, ['en_US', 'en', 'fr_CA', 'fr']) ||
+      article.title ||
+      'Untitled'
+    const author = formatAuthorsForToc(md.authors)
+    const pages = typeof md.pages === 'string' ? md.pages : md.pages == null ? '' : String(md.pages)
+    const startPage =
+      typeof md.start_page === 'string'
+        ? md.start_page
+        : typeof md.start_page === 'number'
+          ? String(md.start_page)
+          : ''
+    group.section.articles.push({
+      id: articleId,
+      title,
+      author,
+      pages: pages || 'N/A',
+      startPage,
+      url: `html/${articleId}.html`,
+    })
+  }
+  return Array.from(groups.values())
+    .sort((a, b) => a.sectionSeq - b.sectionSeq)
+    .map((g) => g.section)
+}
+
+/**
+ * Aggregate the alphabetised, deduplicated contributor list for the
+ * front-page / TOC artefacts. Mirrors imaginations-issue-template's
+ * aggregateContributors but works off Article.workingVersion.metadata.
+ */
+function buildContributorList(tuples) {
+  const seen = new Set()
+  const out = []
+  for (const { article } of tuples) {
+    const md = article.workingVersion?.metadata || {}
+    const authors = Array.isArray(md.authors) ? md.authors : []
+    for (const a of authors) {
+      const givenName = pickLocaleString(a?.givenName, [
+        'en',
+        'en_US',
+        'fr_CA',
+        'fr',
+      ])
+      const familyName = pickLocaleString(a?.familyName, [
+        'en',
+        'en_US',
+        'fr_CA',
+        'fr',
+      ])
+      if (!givenName && !familyName) continue
+      const key = `${givenName}|${familyName}`
+      if (seen.has(key)) continue
+      seen.add(key)
+      out.push({ givenName, familyName })
+    }
+  }
+  out.sort((a, b) =>
+    a.familyName.toLowerCase().localeCompare(b.familyName.toLowerCase())
+  )
+  return out
+}
+
+/**
+ * Assemble the ordered list of MinIO storage keys that the complete-issue
+ * runner will merge. Ordering: front-page → TOC → for each article in
+ * CorpusArticle.order: cover → article PDF.
+ *
+ * Returns only parts whose `storageKey` exists. Skipped parts are logged
+ * graphql-side; the runner additionally tolerates per-part missing keys.
+ */
+async function assembleCompleteIssueParts(corpus, context) {
+  const parts = []
+
+  const front = await ExportArtifact.findOne({
+    corpus: corpus._id,
+    kind: 'front-page',
+    status: 'ready',
+  })
+    .sort({ createdAt: -1 })
+    .lean()
+  if (front?.storageKey) {
+    parts.push({ kind: 'front-page', storageKey: front.storageKey })
+  }
+
+  const toc = await ExportArtifact.findOne({
+    corpus: corpus._id,
+    kind: 'toc',
+    status: 'ready',
+  })
+    .sort({ createdAt: -1 })
+    .lean()
+  if (toc?.storageKey) {
+    parts.push({ kind: 'toc', storageKey: toc.storageKey })
+  }
+
+  // CorpusArticle order — also keep the article ids to look up their
+  // cover + pdf artefacts.
+  const orderedArticleIds = (corpus.articles || [])
+    .slice()
+    .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+    .map((ca) => String(ca.article?._id ?? ca.article))
+    .filter(Boolean)
+
+  for (const articleId of orderedArticleIds) {
+    const cover = await ExportArtifact.findOne({
+      article: articleId,
+      corpus: corpus._id,
+      kind: 'article-cover',
+      status: 'ready',
+    })
+      .sort({ createdAt: -1 })
+      .lean()
+    if (cover?.storageKey) {
+      parts.push({
+        kind: 'article-cover',
+        storageKey: cover.storageKey,
+        articleId,
+      })
+    }
+    const articlePdf = await ExportArtifact.findOne({
+      article: articleId,
+      corpus: corpus._id,
+      kind: 'article-pdf',
+      status: 'ready',
+    })
+      .sort({ createdAt: -1 })
+      .lean()
+    if (articlePdf?.storageKey) {
+      parts.push({
+        kind: 'article-pdf',
+        storageKey: articlePdf.storageKey,
+        articleId,
+      })
+    }
+  }
+  return parts
+}
+
+/**
+ * Walk the corpus' article list (in order), permission-check each, and
+ * return [{ article, articleData }] tuples ready for any of the artefact
+ * runners. Articles the user can't see are dropped with a warning.
+ */
+async function loadCorpusArticles(corpus, context) {
+  const articleIds = (corpus.articles || [])
+    .slice()
+    .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+    .map((ca) => ca.article?._id ?? ca.article)
+    .filter(Boolean)
+    .map(String)
+  const out = []
+  for (const articleId of articleIds) {
+    try {
+      const article = await getArticleByContext(articleId, context)
+      out.push({ article, articleId })
+    } catch (err) {
+      logger.warn(
+        { err, articleId, corpusId: corpus._id?.toString() },
+        'loadCorpusArticles skipped article (no access)'
+      )
+    }
+  }
+  return out
+}
+
+/**
  * Helper for the corpus-scoped artefact mutations (covers, TOC, front page,
  * complete issue). They share the same flow: permission-check the corpus,
  * record a PipelineJob, fire the request at the pipeline service. The
@@ -364,29 +636,203 @@ module.exports = {
      * stubbed and will mark the job failed with "not yet implemented" until
      * the template-renderer port lands. UI surfaces the gap honestly.
      */
-    async startBuildCovers(_, { corpusId }, context) {
-      return startSimpleArtefactJob({
+    async startBuildCovers(_, { corpusId, engine = 'paged' }, context) {
+      if (!context.user) throw new NotAuthenticatedError()
+      if (!(await pipelineClient.isConfigured())) {
+        throw new BadRequestError('Pipeline service is not configured')
+      }
+      const corpus = await Corpus.findById(corpusId)
+      if (!corpus) throw new NotFoundError('Corpus', corpusId)
+
+      const tuples = await loadCorpusArticles(corpus, context)
+      if (tuples.length === 0) {
+        throw new BadRequestError(
+          'Corpus has no buildable articles for cover rendering'
+        )
+      }
+
+      const articles = tuples.map(({ article, articleId }) => ({
+        articleId,
+        articleData: buildArticleCoverPayload(article),
+      }))
+
+      const job = await PipelineJob.create({
         type: 'article-cover',
-        corpusId,
-        context,
+        status: 'queued',
+        corpus: corpus._id,
+        workspace: corpus.workspace || undefined,
+        triggeredBy: context.user._id,
+        params: {
+          corpusId: corpus._id.toString(),
+          engine,
+          count: articles.length,
+        },
       })
+      try {
+        const remote = await pipelineClient.startJob({
+          type: 'article-cover',
+          params: {
+            corpusId: corpus._id.toString(),
+            engine,
+            issue: buildIssuePayload(corpus),
+            articles,
+            pipelineSettings: corpus.pipelineSettings || {},
+          },
+        })
+        job.remoteJobId = remote.id
+        job.status = remote.status || 'queued'
+        await job.save()
+      } catch (err) {
+        job.status = 'failed'
+        job.error = err.message
+        await job.save()
+        throw err
+      }
+      return job
     },
-    async startBuildToc(_, { corpusId }, context) {
-      return startSimpleArtefactJob({ type: 'toc', corpusId, context })
+    async startBuildToc(_, { corpusId, engine = 'paged' }, context) {
+      if (!context.user) throw new NotAuthenticatedError()
+      if (!(await pipelineClient.isConfigured())) {
+        throw new BadRequestError('Pipeline service is not configured')
+      }
+      const corpus = await Corpus.findById(corpusId)
+      if (!corpus) throw new NotFoundError('Corpus', corpusId)
+
+      const tuples = await loadCorpusArticles(corpus, context)
+      const sections = buildTocSections(corpus, tuples)
+      const contributors = buildContributorList(tuples)
+
+      const job = await PipelineJob.create({
+        type: 'toc',
+        status: 'queued',
+        corpus: corpus._id,
+        workspace: corpus.workspace || undefined,
+        triggeredBy: context.user._id,
+        params: {
+          corpusId: corpus._id.toString(),
+          engine,
+          sectionCount: sections.length,
+          articleCount: sections.reduce(
+            (n, s) => n + (s.articles?.length || 0),
+            0
+          ),
+        },
+      })
+      try {
+        const remote = await pipelineClient.startJob({
+          type: 'toc',
+          params: {
+            corpusId: corpus._id.toString(),
+            engine,
+            issue: buildIssuePayload(corpus),
+            contributors,
+            sections,
+            pipelineSettings: corpus.pipelineSettings || {},
+          },
+        })
+        job.remoteJobId = remote.id
+        job.status = remote.status || 'queued'
+        await job.save()
+      } catch (err) {
+        job.status = 'failed'
+        job.error = err.message
+        await job.save()
+        throw err
+      }
+      return job
     },
-    async startBuildFrontPage(_, { corpusId }, context) {
-      return startSimpleArtefactJob({
+
+    async startBuildFrontPage(_, { corpusId, engine = 'paged' }, context) {
+      if (!context.user) throw new NotAuthenticatedError()
+      if (!(await pipelineClient.isConfigured())) {
+        throw new BadRequestError('Pipeline service is not configured')
+      }
+      const corpus = await Corpus.findById(corpusId)
+      if (!corpus) throw new NotFoundError('Corpus', corpusId)
+
+      const tuples = await loadCorpusArticles(corpus, context)
+      const contributors = buildContributorList(tuples)
+
+      const job = await PipelineJob.create({
         type: 'front-page',
-        corpusId,
-        context,
+        status: 'queued',
+        corpus: corpus._id,
+        workspace: corpus.workspace || undefined,
+        triggeredBy: context.user._id,
+        params: {
+          corpusId: corpus._id.toString(),
+          engine,
+          contributorCount: contributors.length,
+        },
       })
+      try {
+        const remote = await pipelineClient.startJob({
+          type: 'front-page',
+          params: {
+            corpusId: corpus._id.toString(),
+            engine,
+            issue: buildIssuePayload(corpus),
+            contributors,
+            pipelineSettings: corpus.pipelineSettings || {},
+          },
+        })
+        job.remoteJobId = remote.id
+        job.status = remote.status || 'queued'
+        await job.save()
+      } catch (err) {
+        job.status = 'failed'
+        job.error = err.message
+        await job.save()
+        throw err
+      }
+      return job
     },
-    async startBuildCompleteIssue(_, { corpusId }, context) {
-      return startSimpleArtefactJob({
+
+    async startBuildCompleteIssue(_, { corpusId, engine = 'paged' }, context) {
+      if (!context.user) throw new NotAuthenticatedError()
+      if (!(await pipelineClient.isConfigured())) {
+        throw new BadRequestError('Pipeline service is not configured')
+      }
+      const corpus = await Corpus.findById(corpusId)
+      if (!corpus) throw new NotFoundError('Corpus', corpusId)
+
+      const parts = await assembleCompleteIssueParts(corpus, context)
+      if (parts.length === 0) {
+        throw new BadRequestError(
+          'No artefacts to merge. Build the front page, TOC, covers, and per-article PDFs first.'
+        )
+      }
+
+      const job = await PipelineJob.create({
         type: 'complete-issue',
-        corpusId,
-        context,
+        status: 'queued',
+        corpus: corpus._id,
+        workspace: corpus.workspace || undefined,
+        triggeredBy: context.user._id,
+        params: {
+          corpusId: corpus._id.toString(),
+          engine,
+          partCount: parts.length,
+        },
       })
+      try {
+        const remote = await pipelineClient.startJob({
+          type: 'complete-issue',
+          params: {
+            corpusId: corpus._id.toString(),
+            parts,
+          },
+        })
+        job.remoteJobId = remote.id
+        job.status = remote.status || 'queued'
+        await job.save()
+      } catch (err) {
+        job.status = 'failed'
+        job.error = err.message
+        await job.save()
+        throw err
+      }
+      return job
     },
 
     /**
