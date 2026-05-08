@@ -61,6 +61,12 @@ services:
   pipeline:
     build:
       context: ./pipeline
+      args:
+        # Set WITH_PRINCE=true in your .env to bake PrinceXML into the
+        # pipeline image. Prince has its own commercial licence terms —
+        # see pipeline/Dockerfile for details.
+        WITH_PRINCE: ${WITH_PRINCE:-false}
+        PRINCE_VERSION: ${PRINCE_VERSION:-16.0}
     container_name: stylo-pipeline
     restart: unless-stopped
     depends_on:

@@ -5,7 +5,7 @@ const os = require('node:os')
 const { execFile } = require('node:child_process')
 const { promisify } = require('node:util')
 
-const { htmlToPdf } = require('./paged-js')
+const { htmlToPdf } = require('./pdf-render')
 const { putObject, getPresignedGetUrl } = require('./storage')
 const { buildIssueContext } = require('./article-covers')
 
@@ -116,6 +116,7 @@ async function rasterisePdfPage1({ pdfPath, workDir, log }) {
  */
 async function runFrontPageJob({ job, jobs }) {
   const { corpusId, issue, contributors = [] } = job.params || {}
+  const engine = job.params?.engine === 'prince' ? 'prince' : 'paged'
   if (!corpusId) {
     jobs.fail(job.id, new Error('params.corpusId is required'))
     return
@@ -170,7 +171,7 @@ async function runFrontPageJob({ job, jobs }) {
     if (stderr?.trim()) log(`pandoc warning: ${stderr.trim()}`)
 
     jobs.throwIfCancelled(job.id)
-    await htmlToPdf({ htmlPaths: [htmlPath], pdfPath, log })
+    await htmlToPdf({ engine, htmlPaths: [htmlPath], pdfPath, log })
 
     jobs.throwIfCancelled(job.id)
     await uploadAndRecord({

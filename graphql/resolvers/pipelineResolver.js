@@ -171,6 +171,17 @@ async function loadAndRefreshJob(jobId) {
  * with `title / volume / number / year / editors / imageCredit`, so we
  * project both sources into that.
  */
+/**
+ * Pick the effective PDF engine for a job. Explicit override from the
+ * mutation arg always wins; otherwise we honour
+ * `corpus.pipelineSettings.princeEnabled` so the editor toggle on the
+ * Production page actually drives renderer selection.
+ */
+function resolveEngine(argEngine, corpus) {
+  if (argEngine === 'prince' || argEngine === 'paged') return argEngine
+  return corpus?.pipelineSettings?.princeEnabled ? 'prince' : 'paged'
+}
+
 function buildIssuePayload(corpus) {
   const ojs = corpus?.metadata?.ojs || {}
   const issueMeta = corpus?.metadata?.issue || {}
@@ -533,7 +544,7 @@ module.exports = {
 
   Mutation: {
     async startBuildArticle(_, args, context) {
-      const { articleId, corpusId, engine = 'paged' } = args
+      const { articleId, corpusId } = args
       if (!context.user) throw new NotAuthenticatedError()
       if (!(await pipelineClient.isConfigured())) {
         throw new BadRequestError(
@@ -548,6 +559,7 @@ module.exports = {
         corpusId,
       })
 
+      const engine = resolveEngine(args.engine, corpus)
       const markdown = buildArticleMarkdown(article)
 
       const job = await PipelineJob.create({

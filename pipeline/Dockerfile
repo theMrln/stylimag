@@ -19,6 +19,30 @@ RUN ARCH=$(dpkg --print-architecture) \
     && dpkg -i pandoc.deb \
     && rm pandoc.deb
 
+# Optional PrinceXML installation. Off by default — Prince is commercial
+# software with its own licensing terms (free for personal / non-commercial
+# use; production deployments require a paid licence; see
+# https://www.princexml.com/purchase/). To enable, build with:
+#
+#   docker compose build --build-arg WITH_PRINCE=true pipeline
+#
+# or set WITH_PRINCE=true in your .env (the docker-compose service forwards
+# it as a build arg).
+ARG WITH_PRINCE=false
+ARG PRINCE_VERSION=16.0
+RUN if [ "$WITH_PRINCE" = "true" ]; then \
+      apt-get update \
+      && ARCH=$(dpkg --print-architecture) \
+      && wget -qO /tmp/prince.deb \
+        "https://www.princexml.com/download/prince-${PRINCE_VERSION}-debian12-${ARCH}.deb" \
+      && apt-get install -y --no-install-recommends /tmp/prince.deb \
+      && rm /tmp/prince.deb \
+      && rm -rf /var/lib/apt/lists/* \
+      && prince --version; \
+    else \
+      echo "WITH_PRINCE=false (skipping Prince install)"; \
+    fi
+
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 

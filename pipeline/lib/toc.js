@@ -5,7 +5,7 @@ const os = require('node:os')
 const { execFile } = require('node:child_process')
 const { promisify } = require('node:util')
 
-const { htmlToPdf } = require('./paged-js')
+const { htmlToPdf } = require('./pdf-render')
 const { putObject, getPresignedGetUrl } = require('./storage')
 const { buildIssueContext } = require('./article-covers')
 
@@ -93,6 +93,7 @@ async function uploadAndRecord({
  */
 async function runTocJob({ job, jobs }) {
   const { corpusId, issue, contributors = [], sections = [] } = job.params || {}
+  const engine = job.params?.engine === 'prince' ? 'prince' : 'paged'
   if (!corpusId) {
     jobs.fail(job.id, new Error('params.corpusId is required'))
     return
@@ -171,7 +172,7 @@ async function runTocJob({ job, jobs }) {
     }
 
     jobs.throwIfCancelled(job.id)
-    await htmlToPdf({ htmlPaths: [frontHtml], pdfPath: frontPdf, log })
+    await htmlToPdf({ engine, htmlPaths: [frontHtml], pdfPath: frontPdf, log })
 
     jobs.throwIfCancelled(job.id)
     await uploadAndRecord({

@@ -2,7 +2,7 @@ const fs = require('node:fs/promises')
 const path = require('node:path')
 const os = require('node:os')
 const { mdToHtml } = require('./pandoc')
-const { htmlToPdf } = require('./paged-js')
+const { htmlToPdf } = require('./pdf-render')
 const { putObject, getPresignedGetUrl } = require('./storage')
 
 function articleArtefactKey({ corpusId, jobId, articleId, ext }) {
@@ -90,7 +90,7 @@ async function runArticlePdfJob({ job, jobs }) {
     log('HTML uploaded to object storage')
 
     jobs.throwIfCancelled(job.id)
-    await htmlToPdf({ htmlPaths: [htmlPath], pdfPath, log })
+    await htmlToPdf({ engine, htmlPaths: [htmlPath], pdfPath, log })
     jobs.setProgress(job.id, 0.9)
     jobs.throwIfCancelled(job.id)
 
