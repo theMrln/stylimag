@@ -1,0 +1,14 @@
+{
+  "buildArticle": {
+    "label": "Build PDF",
+    "tooltip": "Build a PDF for this article via the publishing pipeline",
+    "cancel": "cancel",
+    "download": "download PDF"
+  },
+  "pipelineHealth": {
+    "checking": "checking…",
+    "ready": "pipeline ready",
+    "degraded": "pipeline degraded",
+    "refresh": "refresh health"
+  }
+}

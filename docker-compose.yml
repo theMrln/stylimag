@@ -46,10 +46,34 @@ services:
       STORAGE_ACCESS_KEY: ${STORAGE_ACCESS_KEY:-styloadmin}
       STORAGE_SECRET_KEY: ${STORAGE_SECRET_KEY:-styloadminsecret}
       STORAGE_FORCE_PATH_STYLE: "true"
+      PIPELINE_SERVICE_URL: ${PIPELINE_SERVICE_URL:-http://pipeline:3070}
+      PIPELINE_AUTH_TOKEN: ${PIPELINE_AUTH_TOKEN:-}
     volumes:
       - ./config:/usr/src/app/config:ro
     ports:
       - "3030:3030"
+
+  # Publishing pipeline: Pandoc + Paged.js (Chromium) + S3 client. Stateless;
+  # graphql calls it for article/issue PDF generation and static deploy jobs.
+  pipeline:
+    build:
+      context: ./pipeline
+    container_name: stylo-pipeline
+    restart: unless-stopped
+    depends_on:
+      - minio
+    environment:
+      NODE_ENV: production
+      PORT: "3070"
+      STORAGE_ENDPOINT: ${STORAGE_ENDPOINT:-http://minio:9000}
+      STORAGE_REGION: ${STORAGE_REGION:-us-east-1}
+      STORAGE_BUCKET: ${STORAGE_BUCKET:-stylimag-assets}
+      STORAGE_ACCESS_KEY: ${STORAGE_ACCESS_KEY:-styloadmin}
+      STORAGE_SECRET_KEY: ${STORAGE_SECRET_KEY:-styloadminsecret}
+      STORAGE_FORCE_PATH_STYLE: "true"
+      PIPELINE_AUTH_TOKEN: ${PIPELINE_AUTH_TOKEN:-}
+    ports:
+      - "127.0.0.1:3070:3070"
 
   front:
     build:

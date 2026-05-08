@@ -1,0 +1,38 @@
+.wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.status {
+  font-size: 0.85rem;
+  color: #555;
+
+  &[data-status='succeeded'] {
+    color: #277a3a;
+  }
+  &[data-status='failed'] {
+    color: #b3261e;
+  }
+  &[data-status='cancelled'] {
+    color: #8a6d3b;
+  }
+  &[data-status='running'],
+  &[data-status='queued'] {
+    color: #1c5f8e;
+  }
+}
+
+.download {
+  font-size: 0.85rem;
+  text-decoration: underline;
+}
+
+.error {
+  font-size: 0.85rem;
+  color: #b3261e;
+  max-width: 24rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

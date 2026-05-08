@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<!-- /*This is the template for the generated front matter. Any changes made here will be reflected in the generated front matter.*/ -->
+
+<head>
+    <meta charset='utf-8'>
+    <title>$title.en_US$</title>
+    <style>
+        /*         @import url("https://fonts.googleapis.com/css2?family=Mulish:ital,wght@0,300;0,400;0,600;0,800;1,300;1,400&display=swap"); */
+
+        /* Map Muli to Mulish (Google Fonts name) */
+        @font-face {
+            font-family: 'Muli';
+            src: local('Mulish'), local('Mulish-Regular');
+            font-weight: 400;
+        }
+
+        @font-face {
+            font-family: 'Muli SemiBold';
+            src: local('Mulish'), local('Mulish-SemiBold');
+            font-weight: 600;
+        }
+
+        @font-face {
+            font-family: 'Muli ExtraBold';
+            src: local('Mulish'), local('Mulish-ExtraBold');
+            font-weight: 800;
+        }
+
+        @font-face {
+            font-family: 'Muli Light';
+            src: local('Mulish'), local('Mulish-Light');
+            font-weight: 300;
+        }
+
+        html {
+            box-sizing: border-box;
+        }
+
+        *,
+        *:before,
+        *:after {
+            box-sizing: inherit;
+        }
+
+        body {
+            margin: 0;
+            padding: 2rem;
+            background-color: white;
+            font-family: 'Muli', sans-serif;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+            color: #333;
+        }
+
+        img {
+            max-width: 100%;
+            height: auto;
+        }
+
+        /* Header / Cover Section */
+        #imaginations-logo {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        #issue-title {
+            font-family: 'Muli ExtraBold', sans-serif;
+            color: gray;
+            font-size: 2rem;
+            line-height: 1.2;
+            font-style: normal;
+            text-align: center;
+            text-transform: uppercase;
+            margin-bottom: 1rem;
+        }
+
+        #issue-editor {
+            font-family: "Muli", sans-serif;
+            font-size: 1.2rem;
+            font-style: normal;
+            color: #807c7e;
+            text-align: center;
+            margin-bottom: 0.5rem;
+        }
+
+        #issue {
+            font-family: 'Muli', sans-serif;
+            font-size: 1rem;
+            font-style: normal;
+            color: grey;
+            text-align: center;
+            margin-bottom: 3rem;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 2rem;
+        }
+
+        /* Hide redundant print elements */
+        #issue-title-top,
+        #guest-editor {
+            display: none;
+        }
+
+        /* Logos and Support */
+        .logos-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: center;
+            gap: 2rem;
+            margin-top: 4rem;
+            /* Increased spacing from content */
+            margin-bottom: 2rem;
+            max-width: 700px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        #csi-logo,
+        #prince-logo {
+            text-align: center;
+        }
+
+        #sshrc-logo {
+            width: 100%;
+            text-align: center;
+            margin-top: 1rem;
+        }
+
+        #doi {
+            display: block;
+            font-family: 'Muli Light', sans-serif;
+            color: gray;
+            font-size: 0.9rem;
+            font-style: normal;
+            text-align: center;
+            margin-bottom: 1rem;
+        }
+
+        #financial-support {
+            font-family: 'Muli Light', sans-serif;
+            color: gray;
+            font-size: 0.9rem;
+            line-height: 1.4;
+            font-style: normal;
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        /* TOC */
+        #table-of-contents {
+            font-family: 'Muli Light', sans-serif;
+            color: gray;
+            font-size: 1rem;
+            line-height: 1.5;
+            font-style: normal;
+            text-align: left;
+        }
+
+        .toc-heading {
+            font-family: 'Muli SemiBold', sans-serif;
+            font-style: normal;
+            color: black;
+            font-size: 1.2rem;
+            margin-bottom: 1.5rem;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 0.5rem;
+        }
+
+        #complete-issue {
+            font-family: 'Muli ExtraBold', sans-serif;
+            font-style: normal;
+            color: black;
+            font-size: 1.5rem;
+            margin-bottom: 1.5rem;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 0.5rem;
+            text-align: center;
+        }
+
+        .toc-sub-heading {
+            margin-top: 2rem;
+            margin-bottom: 0.5rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #eee;
+            font-family: 'Muli SemiBold', sans-serif;
+            font-style: normal;
+            color: black;
+            font-size: 1.1rem;
+        }
+
+        .toc-title {
+            margin-top: 2rem;
+            margin-bottom: 0.25rem;
+            color: rgb(241, 88, 68);
+            line-height: 1.2;
+            padding-left: 1.5rem;
+        }
+
+        .toc-title a {
+            font-family: 'Muli Light', sans-serif;
+            font-size: 1rem;
+            color: rgb(241, 88, 68);
+            font-style: normal;
+            text-decoration: none;
+        }
+
+        .toc-title a:hover {
+            text-decoration: underline;
+        }
+
+        .page-number {
+            color: gray;
+            font-size: 0.9rem;
+        }
+
+        .toc-author {
+            padding-left: 1.5rem;
+            margin-top: 0;
+            margin-bottom: 0;
+            font-size: 0.9rem;
+        }
+
+        #image-credit {
+            margin-top: 3rem;
+            border-top: 1px solid gray;
+            padding-top: 0.5rem;
+            font-family: 'Muli SemiBold', sans-serif;
+            color: gray;
+            font-size: 0.8rem;
+        }
+    </style>
+</head>
+
+<body>
+    <div id='imaginations-logo'>
+        <img src='img/Imaginations-logo.svg' width='560' />
+    </div>
+    <div id='issue-title'>$title.en_US$</div>
+    <div id="issue-editor"> Guest Editors: $for(editors)$$editors.given_name$ $editors.family_name$$sep$, $endfor$</div>
+    <div id='issue'>Issue $volume$-$number$, $year$</div>
+    <div id='issue-title-top'>$title.en_US$</div>
+    <div id='guest-editor'>Guest Editors: $for(editors)$$editors.given_name$ $editors.family_name$$sep$, $endfor$</span>
+    </div>
+
+    <p id='complete-issue'><a href="issue$id$_complete.pdf">Complete Issue PDF</a></p>
+
+    <div id='table-of-contents'>
+        <p class='toc-heading'>Sommaire/Contents</p>
+
+        $for(toc_sections)$
+        <!-- Section heading -->
+        $if(toc_sections.section_title)$
+        <p class='toc-sub-heading'>$toc_sections.section_title$</p>
+        $endif$
+
+        <!-- Articles in this section -->
+        $for(toc_sections.articles)$
+        <p class='toc-title'>
+            <a href=" $toc_sections.articles.id$/$toc_sections.articles.id$.html" class="toc-link">$toc_sections.articles.title$</a>
+            <span class='page-number'> • <a href="$toc_sections.articles.id$/$toc_sections.articles.id$.html" class="toc-link">HTML</a> • <a href="$toc_sections.articles.id$/$toc_sections.articles.id$_with_cover.pdf" class="toc-link">PDF</a></span>
+        </p>
+        <p class='toc-author'>$toc_sections.articles.author$</p>
+        $endfor$
+
+        $endfor$
+
+        <div class='logos-container'>
+            <div id='csi-logo'>
+                <img src='img/CSI_logo.jpg' width='180'>
+            </div>
+            <div id='prince-logo'>
+                <img src='img/prince-logo.png' width='80'>
+            </div>
+            <div id='sshrc-logo'>
+                <img src='img/SSHRC-support-logo-long.jpg' width='470'>
+            </div>
+        </div>
+        <div id='doi'><a href='$doi$' target='_blank'>$doi$</a> </div>
+        <div id='financial-support'><em>Imaginations</em> is supported by the Social Sciences and Humanities Research Council of Canada, the Faculty of Liberal Arts and Professional Studies at York University, and the Department of Humanities at York University.<br> PDF conversion software is provided by princexml (YesLogic Pty. Ltd.). </div>
+    </div>
+</body>
+
+</html>

@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset='utf-8'>
+	<title> $title.en_US$ </title>
+
+	<!-- <link rel='stylesheet' media='print' href='../../css/cover.css'> -->
+
+	<style>
+		@page {
+			size: 7in 10in;
+		}
+
+		html,
+		body,
+		div,
+		header,
+		p,
+		blockquote,
+		ul,
+		ol,
+		li,
+		pre {
+			margin: 0;
+			padding: 0;
+			hyphens: none;
+		}
+
+		body {
+			background-repeat: no-repeat;
+			background-image: url(../img/imaginations-logo.jpg), url(../img/cover.png);
+			background-position: 0in 0in, 0in 1.2in;
+			background-size: 5.5in, 2.4in;
+		}
+
+		hr {
+			display: none;
+		}
+
+		a {
+			color: #ef4136;
+			text-decoration: none;
+		}
+
+		#current-issue,
+		#citation,
+		#image-credit {
+			position: absolute;
+			color: #231f20;
+			font-family: "Muli", sans-serif;
+			line-height: 1.455;
+			page-break-after: auto;
+			page-break-before: auto;
+			text-align: left;
+		}
+
+		#current-issue {
+			left: 2.7in;
+			top: 1.2in;
+			font-size: 8.5pt;
+		}
+
+		#citation {
+			top: 4.8in;
+			font-family: "Muli Light", sans-serif;
+			font-size: 11pt;
+		}
+
+		#image-credit {
+			left: 2.7in;
+			top: 4.28in;
+			font-size: 8.5pt;
+		}
+
+		#creative-commons {
+			position: absolute;
+			top: 6.5in;
+			background-repeat: no-repeat;
+			background-image: url(../img/by-nc-nd.png);
+			background-position: center top;
+			background-size: 1.2in;
+		}
+
+		.creative-commons {
+			padding-top: 0.8in;
+			color: #231f20;
+			font-family: "Minion Pro", serif;
+			font-size: 10pt;
+			text-align: justify;
+		}
+
+		.current-issue {
+			font-size: 12.5pt;
+			padding-top: 12.5pt;
+		}
+	</style>
+</head>
+
+<body>
+	<div id='current-issue'>
+		<p>
+			IMAGINATIONS:<br />
+			JOURNAL OF CROSS-CULTURAL IMAGE STUDIES |<br>
+			REVUE D’ÉTUDES INTERCULTURELLES DE L’IMAGE<br>
+		</p>
+		<p style='padding-top: 6pt;'>
+			Publication details, including open access policy and instructions for contributors:<br>
+			<a href='https://imaginationsjournal.ca'>https://imaginationsjournal.ca</a><br>
+		</p>
+		<p class='current-issue'>
+			<strong>
+				<span id="the_issue_title">$the_issue_title$</span>
+				<br>
+				Guest Editors:
+				<span id="the_editors">$the_editors$</span>
+			</strong>
+		</p>
+	</div>
+	<div id="image-credit">
+		<span id="the_image_credit">Image credit: $the_image_credit$</span>
+	</div>
+	<div id='citation'>
+		<p>
+			To cite this article:<br>
+			<span id="the_authors">$the_authors$</span>
+			<span id="the_citation">$the_citation$</span>
+		</p>
+		<p style='padding-top: 6pt;'>
+			To link to this article: <a href='https://dx.doi.org/$the_doi$' id='doi_id'>https://dx.doi.org/
+				<span id="the_doi">$the_doi$</span>
+			</a> <br>
+		</p>
+	</div>
+	<div id='creative-commons' class='creative-commons'>
+		The copyright for each article belongs to the author and has been published in this journal under a <a href='https://creativecommons.org/licenses/by-nc-nd/4.0/'>Creative Commons 4.0 International Attribution NonCommercial NoDerivatives</a> license that allows others to share for non-commercial purposes the work with an acknowledgement of the work’s authorship and initial publication in this journal. The content of this article represents the author’s original work and any third-party content, either image or text, has been included under the Fair Dealing exception in the Canadian Copyright Act, or the author has provided the required publication permissions. Certain works referenced herein may be separately licensed, or the author has exercised their right to fair dealing under the Canadian Copyright Act.
+	</div>
+</body>
+
+</html>

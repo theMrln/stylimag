@@ -1,0 +1,11 @@
+node_modules
+npm-debug.log
+.git
+.gitignore
+.env
+.env.*
+__tests__
+*.test.js
+templates/CSS_REVIEW_RECOMMENDATIONS.md
+templates/XELATEX_TEMPLATE_README.md
+templates/api_config*.json.template

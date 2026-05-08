@@ -437,6 +437,79 @@ input FilterCorpusInput {
   corpusId: ID
 }
 
+enum PipelineJobType {
+  article_pdf
+  article_html
+  article_cover
+  toc
+  front_page
+  complete_issue
+  batch
+  page_numbers
+  static_deploy
+}
+
+enum PipelineJobStatus {
+  queued
+  running
+  succeeded
+  failed
+  cancelled
+}
+
+enum PdfEngine {
+  paged
+  prince
+}
+
+type ExportArtifact {
+  _id: ID!
+  kind: String
+  format: String
+  status: String
+  storageKey: String
+  mimeType: String
+  size: Int
+  presignedUrl: String
+  article: Article
+  corpus: Corpus
+  createdAt: DateTime
+  updatedAt: DateTime
+}
+
+type PipelineJob {
+  _id: ID!
+  type: String!
+  status: String!
+  progress: Float
+  remoteJobId: String
+  article: Article
+  corpus: Corpus
+  triggeredBy: User
+  params: JSON
+  logsTail: String
+  artefacts: [ExportArtifact!]!
+  error: String
+  startedAt: DateTime
+  finishedAt: DateTime
+  createdAt: DateTime
+  updatedAt: DateTime
+}
+
+"""
+Lightweight reflection of the pipeline service's /health endpoint, used by the
+PipelineHealthBadge in the production UI.
+"""
+type PipelineHealth {
+  ok: Boolean
+  httpStatus: Int
+  pandoc: JSON
+  chromium: JSON
+  storage: JSON
+  node: JSON
+  error: String
+}
+
 type Query {
   """
   Get authenticated user info.
@@ -485,6 +558,15 @@ type Query {
 
   "List OJS instances that are configured (staging, production)"
   ojsInstances: [OjsInstance!]!
+
+  "Pipeline service health (Pandoc / Chromium / storage versions)"
+  pipelineHealth: PipelineHealth
+
+  "Single pipeline job by id"
+  pipelineJob(id: ID!): PipelineJob
+
+  "List pipeline jobs, optionally filtered by corpus"
+  pipelineJobs(corpusId: ID, limit: Int): [PipelineJob!]!
 }
 
 type Mutation {
@@ -677,6 +759,15 @@ type Mutation {
   Requires authentication with access to the article (as owner, contributor, or via a workspace).
   """
   updateArticleBibliography(input: UpdateArticleBibliographyInput!): [BibliographyEntry]
+
+  """
+  Kick off a single-article PDF build job in the pipeline service.
+  Returns the local PipelineJob; poll \`pipelineJob(id)\` to track status.
+  """
+  startBuildArticle(articleId: ID!, corpusId: ID!, engine: PdfEngine = paged): PipelineJob
+
+  """Cancel a running or queued pipeline job."""
+  cancelPipelineJob(id: ID!): PipelineJob
 }`
 
 module.exports = makeExecutableSchema({ typeDefs, resolvers })

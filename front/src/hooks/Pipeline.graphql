@@ -1,0 +1,68 @@
+fragment basicArtefactFields on ExportArtifact {
+  _id
+  kind
+  format
+  status
+  storageKey
+  mimeType
+  size
+  presignedUrl
+  createdAt
+}
+
+fragment basicPipelineJobFields on PipelineJob {
+  _id
+  type
+  status
+  progress
+  remoteJobId
+  logsTail
+  error
+  startedAt
+  finishedAt
+  createdAt
+  updatedAt
+  artefacts {
+    ...basicArtefactFields
+  }
+}
+
+query getPipelineHealth {
+  pipelineHealth {
+    ok
+    httpStatus
+    pandoc
+    chromium
+    storage
+    node
+    error
+  }
+}
+
+query getPipelineJob($id: ID!) {
+  pipelineJob(id: $id) {
+    ...basicPipelineJobFields
+  }
+}
+
+query getPipelineJobs($corpusId: ID, $limit: Int) {
+  pipelineJobs(corpusId: $corpusId, limit: $limit) {
+    ...basicPipelineJobFields
+  }
+}
+
+mutation startBuildArticle(
+  $articleId: ID!
+  $corpusId: ID!
+  $engine: PdfEngine = paged
+) {
+  startBuildArticle(articleId: $articleId, corpusId: $corpusId, engine: $engine) {
+    ...basicPipelineJobFields
+  }
+}
+
+mutation cancelPipelineJob($id: ID!) {
+  cancelPipelineJob(id: $id) {
+    ...basicPipelineJobFields
+  }
+}

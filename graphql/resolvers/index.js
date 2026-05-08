@@ -26,6 +26,12 @@ const {
   Mutation: CorpusMutation,
 } = require('./corpusResolver')
 const { Query: OjsQuery, Mutation: OjsMutation } = require('./ojsResolver')
+const {
+  Query: PipelineQuery,
+  Mutation: PipelineMutation,
+  PipelineJob,
+  ExportArtifact,
+} = require('./pipelineResolver')
 const { Mutation: AuthMutation } = require('./authResolver')
 const { InstanceUsageStats, Query: StatsQuery } = require('./statsResolver')
 const {
@@ -54,6 +60,8 @@ module.exports = {
   WorkingVersion,
   Workspace,
   Corpus,
+  PipelineJob,
+  ExportArtifact,
   // Root queries & mutations
   Query: {
     ...UserQuery,
@@ -64,6 +72,7 @@ module.exports = {
     ...WorkspaceQuery,
     ...CorpusQuery,
     ...OjsQuery,
+    ...PipelineQuery,
   },
   Mutation: {
     ...UserMutation,
@@ -74,5 +83,6 @@ module.exports = {
     ...WorkspaceMutation,
     ...CorpusMutation,
     ...OjsMutation,
+    ...PipelineMutation,
   },
 }

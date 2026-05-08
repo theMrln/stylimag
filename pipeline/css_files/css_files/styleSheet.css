@@ -1,0 +1,106 @@
+@import url('https://fonts.googleapis.com/css?family=Karla|Montserrat');
+.pkp_brand_footer img {
+	max-height:0px;
+}
+
+body, p, h1, h2, h3, h4, li {
+  font-family:'Karla', sans-serif;
+  color:#000000;
+  background-color:white;
+  font-size:0.98em;
+}
+
+#navigationPrimary a:hover, #navigationPrimary a:focus, .pkp_navigation_search_wrapper a:hover, .pkp_navigation_search_wrapper a:focus {
+  color:#ef4035;
+}
+#navigationPrimary > li > a {
+    padding-bottom: 6px;
+    border-bottom-width: 4px;
+}
+#navigationPrimary a, .pkp_navigation_search_wrapper a {
+    font-family: "Montserrat", -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen-Sans", "Ubuntu", "Cantarell", "Helvetica Neue", sans-serif;
+    font-size: 16px;
+    color: #000000;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+
+.pkp_site_name .is_img img {
+	display: block;
+    max-height: 200px;
+    max-width: 72%;
+    width: auto;
+    height: auto;
+}
+
+
+.cmp_button_wire, .obj_galley_link {
+    display: inline-block;
+    padding: 0 1em;
+    background: #EE4036;
+    border: 1px solid #EE4036;
+    border-radius: 3px;
+    font-size: 13px;
+    line-height: 28px;
+    color: #fff;
+    text-decoration: none;
+}
+
+.cmp_manuscript_button, .block_make_submission a, .obj_galley_link {
+    font-family: "Montserrat", -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen-Sans", "Ubuntu", "Cantarell", "Helvetica Neue", sans-serif;
+    font-weight: 700;
+    text-transform: uppercase;
+    background: #000000;
+    color: #ffffff;
+    border: none;
+}
+
+.pkp_page_index .additional_content {
+	    border-top: 0px solid #ddd;
+		
+}
+@media (min-width: 480px)
+css?name=stylesheet:1
+.pkp_page_index .additional_content {
+    padding-left: 20px;
+    padding-right: 20px;
+}
+
+.obj_article_details .item.doi .label, .obj_article_details .item.keywords .label {
+    font-size: 16px;
+}
+.obj_article_details .main_entry .item .label {
+    margin: 0 0 20px;
+    font-family: "Montserrat", -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen-Sans", "Ubuntu", "Cantarell", "Helvetica Neue", sans-serif;
+    font-size: 16px;
+    font-weight: 700;
+}
+.obj_article_details .main_entry .label {
+    display: block;
+    padding: 0 0 5px;
+    border-bottom: 1px solid #EE4036;
+    color: rgba(0,0,0,0.54);
+    text-transform: uppercase;
+}
+div.pkp_footer_content, div.pkp_brand_footer
+{
+	background-color:white;
+}
+.pkp_page_index .current_issue .current_issue_title {
+	font-size: 24px;
+	line-height: 1.3;
+}
+
+/* Resize site header in mobile view */
+@media (max-width: 991px){
+    .pkp_structure_head {
+        padding-top: 10px;
+		height: 110px;
+    }
+}
+@media (max-width: 767px){
+    .pkp_structure_head {
+        height: 15vw;
+    }
+}

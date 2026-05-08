@@ -1,0 +1,1110 @@
+<!DOCTYPE html>
+<html lang="$locale$">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  $for(contributors)$
+  <meta name=" author" content="$authors.givenName.en_US$ $authors.familyName.en_US$">
+  $endfor$
+
+  <title>$title.en_US$</title>
+
+  <!-- <link rel="stylesheet" href="../../css/imaginations_html.css"> -->
+
+  <style>
+    /* Narrow sans for appendix grids in print. */
+    @import url("https://fonts.googleapis.com/css2?family=Roboto+Condensed:ital,wght@0,400;0,700;1,400&display=swap");
+
+    @media screen {
+      /*
+     @import url("https://fonts.googleapis.com/css2?family=Merriweather:ital,wght@0,300;0,400;0,700;0,900;1,300;1,400;1,700;1,900&display=swap");
+      @import url("https://fonts.googleapis.com/css2?family=Merriweather+Sans:ital,wght@0,300..800;1,300..800&display=swap");
+      @import url("https://fonts.googleapis.com/css2?family=Mulish:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,300;1,400;1,500;1,600;1,700;1,800&display=swap");
+ */
+
+      /* reset */
+      html,
+      body,
+      div,
+      header,
+      p,
+      blockquote,
+      ul,
+      ol,
+      li,
+      pre {
+        margin: 0;
+        padding: 0;
+        hyphens: auto;
+      }
+
+      :root {
+        --serif-font: "Merriweather", serif;
+        --sans-font: "Mulish", sans-serif;
+      }
+
+      body {
+        background-color: ghostwhite;
+        position: relative;
+        max-width: 800px;
+        margin: auto;
+        padding: 0 50px;
+        font-family: "Merriweather", serif;
+        font-weight: 400;
+        line-height: 1.75;
+        color: #000000;
+      }
+
+      article {
+        text-align: justify;
+        vertical-align: baseline;
+        hyphens: auto;
+        counter-reset: paragraph;
+      }
+
+      /* basic document classes */
+
+      p,
+      li {
+        margin-bottom: 1rem;
+        font-feature-settings: "onum" 1;
+        font-variant-numeric: oldstyle-nums;
+        text-align: justify;
+        text-align-last: left;
+        vertical-align: baseline;
+        -webkit-hyphens: auto;
+        -ms-hyphens: auto;
+        hyphens: auto;
+        orphans: 2;
+        page-break-after: auto;
+        page-break-before: auto;
+        widows: 2;
+        counter-increment: paragraph;
+        hanging-punctuation: first force-end last;
+      }
+
+      h1,
+      h2,
+      h3,
+      h4,
+      h5 {
+        margin: 3rem 0 1.38rem;
+        font-family: var(--sans-font);
+        font-weight: 400;
+        line-height: 1.3;
+        -epub-hyphens: none;
+        hyphens: none;
+        page-break-after: avoid;
+        page-break-before: auto;
+      }
+
+      h1 {
+        margin-top: 0;
+        color: #e9362c;
+        font-weight: 500;
+        line-height: 1.5;
+        font-family: var(--sans-font);
+        text-align: center;
+        text-transform: uppercase;
+        -webkit-column-span: all;
+        column-span: all;
+        page-break-after: avoid;
+        break-before: page;
+        string-set: chapter-title content();
+        counter-reset: page 5;
+      }
+
+      h2 {
+        color: #e9362c;
+        font-weight: 500;
+        font-size: 1.125rem;
+        font-family: var(--sans-font);
+        text-align: left;
+        text-transform: uppercase;
+      }
+
+      h3,
+      h4 {
+        color: #e9362c;
+        font-weight: 500;
+        font-size: 1rem;
+        font-family: var(--sans-font);
+        line-height: 12.554pt;
+        text-align: left;
+      }
+
+      h5 {
+        font-size: 1rem;
+      }
+
+      figure {
+        font-size: 0.9rem;
+        counter-increment: figure;
+        break-inside: avoid;
+      }
+
+      figcaption,
+      figcaption.p {
+        margin-bottom: 20px;
+        padding-bottom: 5px;
+        color: #a3aaa7;
+        font-size: 0.702rem;
+        font-family: var(--sans-font);
+        font-feature-settings: "dlig" 1, "onum" 1;
+        text-align: center;
+        -epub-hyphens: none;
+        hyphens: none;
+        orphans: 1;
+        break-before: avoid;
+        border-bottom: 1px solid #ddd;
+      }
+
+      figcaption::before {
+        /* generated content for counters */
+        font-weight: normal;
+        /* content: "Figure " counter(figure) ": " */
+      }
+
+      img {
+        display: block;
+        width: 100%;
+        max-width: 100%;
+        margin: 0 auto;
+        padding: 6pt 0;
+      }
+
+      li {
+        margin-left: 1.5rem;
+      }
+
+      table {
+        hyphens: none;
+        border-collapse: collapse;
+      }
+
+      th,
+      td {
+        padding: 5px;
+        border: 0.3px solid gray;
+      }
+
+      tr {
+        font-size: 0.889rem;
+        font-family: var(--sans-font);
+      }
+
+      .header tr {
+        font-style: italic;
+      }
+
+      td {
+        font-size: 0.889rem;
+        font-family: var(--sans-font);
+      }
+
+      blockquote,
+      blockquote p,
+      blockquote li {
+        margin-right: 0.5rem;
+        margin-bottom: 0.938rem;
+        margin-left: 17px;
+        color: #828383;
+        background-color: ghostwhite;
+        font-size: 0.889rem;
+        font-family: var(--sans-font);
+        font-style: normal;
+        font-feature-settings: "onum" 1;
+        font-variant-numeric: oldstyle-nums;
+        orphans: 2;
+        text-align: justify;
+        widows: 2;
+      }
+
+      code p {
+        padding: 6pt;
+        color: rgb(28, 129, 28);
+        font-size: 0.889rem;
+        font-family: "VT323", monospace;
+      }
+
+      pre,
+      pre code {
+        font-size: 0.8rem;
+        /* whatever looks good on screen */
+        line-height: 1.35;
+        padding-bottom: 1.35rem;
+        background-color: transparent;
+        white-space: preserve-nowrap;
+      }
+
+
+      sup {
+        position: relative;
+        top: -0.4rem;
+        font-size: 0.9rem;
+        vertical-align: baseline;
+      }
+
+      a {
+        color: #828383;
+        text-decoration: none;
+      }
+
+      .dropcap {
+        float: left;
+        margin-top: -0.074rem;
+        margin-right: 0.07rem;
+        margin-bottom: -1rem;
+        color: #e9362c;
+        font-size: 6.2rem;
+        line-height: 1;
+      }
+
+      .print_only {
+        display: none;
+      }
+
+      /* clear float after epigraph */
+
+      .EP+p {
+        clear: both;
+      }
+
+      hr {
+        display: none;
+      }
+
+      /* basic classes that are variables or otherwise set in pandoc */
+
+      .abstract {
+        margin-bottom: 12pt;
+        color: #1c1b1a;
+        font-weight: normal;
+        font-size: 0.889rem;
+        font-feature-settings: "onum" 1;
+        font-variant-numeric: oldstyle-nums;
+        orphans: 2;
+        page-break-after: auto;
+        page-break-before: auto;
+        widows: 2;
+      }
+
+      .author,
+      .author p {
+        string-set: chapter-author content();
+        /* column-span: all; */
+        margin: auto;
+        margin-top: 6px;
+        margin-bottom: 18px;
+        color: #828383;
+        font-size: 0.889rem;
+        font-family: var(--sans-font);
+        text-align: center;
+        text-align-last: center;
+        text-transform: uppercase;
+        page-break-after: avoid;
+        page-break-before: avoid;
+      }
+
+      .footnotes,
+      .footnotes p {
+        margin-top: 10.8px;
+        font-size: 0.889rem;
+        font-feature-settings: "onum" 1;
+        text-align: justify;
+        text-align-last: left;
+      }
+
+      .footnotes ol {
+        margin-left: -20pt;
+        padding-left: 20pt;
+        list-style-position: outside;
+      }
+
+      .footnotes li {
+        padding-left: 10px;
+        text-indent: 0;
+      }
+
+      /* basic classes that need to be coded manually */
+
+      /* epigraph */
+      .EP,
+      .EP p {
+        float: right;
+        margin-bottom: 6pt;
+        margin-left: 60px;
+        color: #474847;
+        font-size: 0.889rem;
+        font-style: italic;
+        font-feature-settings: "onum" 1;
+        text-align: left;
+      }
+
+      /* pandoc uses refs for REF */
+
+      .REF p {
+        margin-top: 6px;
+        padding-left: 28px;
+        font-size: 0.889rem;
+        font-feature-settings: "onum" 1;
+        text-align: left;
+        font-variant-numeric: oldstyle-nums;
+        text-align-last: left;
+        text-indent: -28px;
+        orphans: 2;
+        widows: 2;
+      }
+
+      .REF h2,
+      .footnotes h2 {
+        color: black;
+      }
+
+      .displayFlexbox {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        width: 100%;
+      }
+
+      .displayFlexItemLeft {
+        padding-right: 1rem;
+        flex-grow: 1;
+        flex-shrink: 1;
+        flex-basis: auto;
+      }
+
+      .displayFlexItemRight {
+        padding-left: 1rem;
+        padding-right: 0;
+        margin-left: 1rem;
+        flex-grow: 1;
+        flex-shrink: 1;
+        flex-basis: auto;
+      }
+
+
+      .displayFlexItemLeftAlt {
+        flex-basis: 45%;
+        padding-right: 1rem;
+      }
+
+      .displayFlexItemRightAlt {
+        flex-basis: 45%;
+        padding-left: 1rem;
+      }
+
+      .flexContainer {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+      }
+
+      .flex-items {
+        flex-shrink: 3;
+      }
+
+      .display2col {
+        column-count: 2;
+        column-gap: 2em;
+        vertical-align: top;
+      }
+
+      .display2col img {
+        display: block;
+        /* Makes images block-level elements */
+        width: 100%;
+        /* Optional: Ensures images are fully contained within their column */
+        height: auto;
+        /* Maintains aspect ratio */
+      }
+
+      .alignRight {
+        margin-bottom: 6pt;
+        /* margin-left: 1.5em; */
+        color: #1c1b1a;
+        font-size: 10pt;
+        font-family: var(--serif-font);
+        font-style: normal;
+        font-feature-settings: "onum" 1;
+        font-variant-numeric: oldstyle-nums;
+        line-height: 130%;
+        text-align: right !important;
+        text-align-last: right;
+        vertical-align: baseline;
+        -webkit-hyphens: auto;
+        -ms-hyphens: auto;
+        hyphens: auto;
+        orphans: 2;
+        page-break-after: auto;
+        page-break-before: auto;
+        widows: 2;
+        counter-increment: paragraph;
+        hanging-punctuation: first force-end last;
+      }
+
+      .contributorFrench p {
+        color: darkgray;
+      }
+
+      /* Utility class: remove default italics / decoration from specific spans */
+      .nodecor {
+        font-style: normal;
+        text-decoration: none;
+      }
+    }
+
+    @media print {
+      :root {
+        --serif-font: "Linux Libertine O", serif;
+        --sans-font: "Muli", sans-serif;
+        --appendix-table-font: "Roboto Condensed", "Arial Narrow", "Helvetica Neue Condensed", "Nimbus Sans Narrow", "Liberation Sans Narrow", sans-serif;
+        --text-font-size: 10pt;
+        --common-color: #e9362c;
+        --common-font-weight: 500;
+        --common-hyphens: none;
+        --common-margin-bottom: 6pt;
+      }
+
+      html,
+      body,
+      div,
+      header,
+      p,
+      blockquote,
+      ul,
+      ol,
+      li,
+      pre {
+        margin: 0;
+        padding: 0;
+        hyphens: auto;
+      }
+
+      body {
+        position: relative;
+        max-width: 600px;
+        margin: auto;
+        padding: 0 50px;
+      }
+
+      article,
+      figure {
+        text-align: justify;
+        vertical-align: baseline;
+        hyphens: auto;
+      }
+
+      figure {
+        font-size: 0.9em;
+        counter-increment: figure;
+        break-inside: avoid;
+      }
+
+      figcaption {
+        margin-bottom: 20px;
+        padding-bottom: 5px;
+        color: #a3aaa7;
+        font-weight: normal;
+        font-size: 7pt;
+        font-family: var(--sans-font);
+        font-feature-settings: "dlig" 1, "onum" 1, "lfbd" 1, "rtbd" 1;
+        line-height: 12.554pt;
+        text-align: center;
+        -epub-hyphens: none;
+        hyphens: none;
+        orphans: 1;
+        break-before: avoid;
+        border-bottom: 1px solid #ddd;
+      }
+
+      img {
+        display: block;
+        width: 100%;
+        max-width: 100%;
+        height: auto;
+        margin: 0 auto;
+        padding: 6pt 0;
+      }
+
+      h1,
+      h2,
+      h3,
+      h4 {
+        margin-bottom: var(--common-margin-bottom);
+        color: var(--common-color);
+        font-weight: var(--common-font-weight);
+        font-family: var(--sans-font);
+        -epub-hyphens: var(--common-hyphens);
+        hyphens: var(--common-hyphens);
+      }
+
+      h1 {
+        margin-bottom: 6px;
+        font-size: 12.5px;
+        line-height: 19pt;
+        text-align: center;
+        text-transform: uppercase;
+        -webkit-column-span: all;
+        column-span: all;
+        page-break-after: avoid;
+        break-before: page;
+        string-set: chapter-title content();
+        counter-reset: page 5;
+      }
+
+      h2 {
+        margin-top: 12pt;
+        margin-bottom: 12pt;
+        font-size: 9pt;
+        line-height: 12.554pt;
+        text-align: left !important;
+        text-align-last: left !important;
+        text-justify: none !important;
+        text-transform: uppercase;
+      }
+
+      h3,
+      h4 {
+        margin-top: 0;
+        margin-right: 0;
+        margin-left: 0;
+        font-size: 10px;
+        line-height: 12.554pt;
+        text-align: left;
+        orphans: 99;
+        page-break-after: avoid;
+        page-break-before: auto;
+      }
+
+      p,
+      li {
+        margin-bottom: var(--common-margin-bottom);
+        color: #1c1b1a;
+        font-size: var(--text-font-size);
+        font-family: var(--serif-font);
+        font-style: normal;
+        font-feature-settings: "onum" 1;
+        font-variant-numeric: oldstyle-nums;
+        line-height: 130%;
+        text-align: justify;
+        text-align-last: left;
+        vertical-align: baseline;
+        -webkit-hyphens: auto;
+        -ms-hyphens: auto;
+        hyphens: auto;
+        orphans: 2;
+        page-break-after: auto;
+        page-break-before: auto;
+        widows: 2;
+        counter-increment: paragraph;
+        hanging-punctuation: first force-end last;
+      }
+
+      li {
+        margin-left: 1.5em;
+      }
+
+      table {
+        hyphens: none;
+        border-collapse: collapse;
+      }
+
+      th,
+      td {
+        padding: 5px;
+        border: 0.3px solid gray;
+      }
+
+      tr,
+      td {
+        font-size: 8pt;
+        font-family: var(--sans-font);
+      }
+
+      .header tr {
+        font-style: italic;
+      }
+
+      /* Appendix / annexe wide tables (print): Pandoc auto-ids `## Appendix: …`
+         as `appendix-…` and `## Annexe …` as `annexe-…`. Constrain the first
+         table after that heading (with up to two optional intervening <p>
+         blocks) to the text measure so dense grids stay inside the frame. */
+      :is(
+        h2[id^="appendix"] + table,
+        h2[id^="appendix"] + p + table,
+        h2[id^="appendix"] + p + p + table,
+        h2[id^="annexe"] + table,
+        h2[id^="annexe"] + p + table,
+        h2[id^="annexe"] + p + p + table
+      ) {
+        table-layout: fixed;
+        width: 100%;
+        max-width: 100%;
+      }
+
+      :is(
+        h2[id^="appendix"] + table,
+        h2[id^="appendix"] + p + table,
+        h2[id^="appendix"] + p + p + table,
+        h2[id^="annexe"] + table,
+        h2[id^="annexe"] + p + table,
+        h2[id^="annexe"] + p + p + table
+      ) th,
+      :is(
+        h2[id^="appendix"] + table,
+        h2[id^="appendix"] + p + table,
+        h2[id^="appendix"] + p + p + table,
+        h2[id^="annexe"] + table,
+        h2[id^="annexe"] + p + table,
+        h2[id^="annexe"] + p + p + table
+      ) td {
+        overflow-wrap: anywhere;
+        word-break: normal;
+        hyphens: manual;
+        vertical-align: top;
+        padding: 3px 2px;
+        font-family: var(--appendix-table-font);
+        font-size: calc(6.5pt * 0.75);
+        line-height: 1.25;
+      }
+
+      blockquote,
+      blockquote p,
+      blockquote li {
+        margin-top: 0;
+        margin-right: 8px;
+        margin-bottom: 15px;
+        margin-left: 17px;
+        color: #828383;
+        font-size: 8.5pt;
+        font-family: var(--sans-font);
+        font-style: normal;
+        font-feature-settings: "onum" 1, "lfbd" 1, "rtbd" 1;
+        line-height: 12.554pt;
+        orphans: 2;
+        text-align: justify;
+        widows: 2;
+      }
+
+      code p {
+        padding: 6pt;
+        color: rgb(28, 129, 28);
+        font-size: 8pt;
+        font-family: "TheSansTypewriter", monospace;
+      }
+
+      pre,
+      pre code,
+      code {
+        font-size: 0.6rem;
+        /* adjust to taste */
+        line-height: 1.2;
+        padding-bottom: 0.8rem;
+        background-color: transparent;
+        white-space: preserve-nowrap;
+      }
+
+      sup {
+        position: relative;
+        top: -0.4rem;
+        font-size: 9px;
+        vertical-align: baseline;
+      }
+
+      a {
+        color: #4646ed;
+        text-decoration: none;
+      }
+
+      .dropcap {
+        float: left;
+        margin-top: -0.074em;
+        margin-right: 0.05em;
+        margin-bottom: -0.273em;
+        color: var(--common-color);
+        font-size: 4.863em;
+        line-height: 1;
+      }
+
+      .print_only {
+        display: none;
+      }
+
+      .EP+p {
+        clear: both;
+      }
+
+      .type,
+      .type p,
+      .type blockquote {
+        font-family: "Courier New", Courier, mono;
+      }
+
+
+      hr {
+        display: none;
+      }
+
+      .abstract,
+      .abstract p,
+      .author,
+      .author p {
+        margin-bottom: 12pt;
+        color: #1c1b1a;
+        font-weight: normal;
+        font-size: 8pt;
+        font-family: var(--serif-font);
+        font-style: normal;
+        font-feature-settings: "onum" 1;
+        font-variant-numeric: oldstyle-nums;
+        line-height: 12.554pt;
+        text-align: justify;
+        text-align-last: left;
+        orphans: 2;
+        page-break-after: auto;
+        page-break-before: auto;
+        widows: 2;
+      }
+
+      .author,
+      .author p {
+        string-set: chapter-author content();
+        margin: auto;
+        margin-top: 6px;
+        margin-bottom: 18px;
+        color: #828383;
+        font-size: 8pt;
+        font-family: var(--sans-font);
+        line-height: 15pt;
+        text-align: center;
+        text-align-last: center;
+        text-transform: uppercase;
+        page-break-after: avoid;
+        page-break-before: avoid;
+      }
+
+      .footnotes {
+        margin-top: 10.8px;
+        padding-left: 0;
+        font-size: 9pt;
+        font-family: var(--serif-font);
+        font-feature-settings: "onum" 1, "lfbd" 1, "rtbd" 1;
+        line-height: 12.554pt;
+        text-align: justify;
+        text-align-last: left;
+      }
+
+      .footnotes ol {
+        margin-left: -20pt;
+        padding-left: 20pt;
+        list-style-position: outside;
+      }
+
+      .footnotes li {
+        padding-left: 10px;
+        text-indent: 0;
+      }
+
+      .EP,
+      .EP p {
+        float: right;
+        margin-bottom: var(--common-margin-bottom);
+        margin-left: 60px;
+        color: #474847;
+        font-size: 8.5pt;
+        font-style: italic;
+        font-feature-settings: "onum" 1, "lfbd" 1, "rtbd" 1;
+        line-height: 12.554pt;
+        text-align: left;
+      }
+
+      .displayFlexbox {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        width: 100%;
+      }
+
+      .displayFlexItemLeft {
+        padding-right: 1rem;
+        flex-grow: 1;
+        flex-shrink: 1;
+        flex-basis: auto;
+      }
+
+      .displayFlexItemRight {
+        padding-left: 1rem;
+        padding-right: 0;
+        margin-left: 1rem;
+        flex-grow: 1;
+        flex-shrink: 1;
+        flex-basis: auto;
+      }
+
+      .displayFlexItemLeftAlt {
+        flex-basis: 45%;
+        padding-right: 1rem;
+      }
+
+      .displayFlexItemRightAlt {
+        flex-basis: 45%;
+        padding-left: 1rem;
+      }
+
+      .flexContainer {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+      }
+
+      .display2col {
+        column-count: 2;
+        column-gap: 2em;
+      }
+
+      .REF {
+        margin-top: 6px;
+        padding-left: 28px;
+        font-family: var(--serif-font);
+        font-feature-settings: "onum" 1, "lfbd" 1, "rtbd" 1;
+        line-height: 10.5pt;
+        text-align: justify;
+        text-align-last: left;
+        text-indent: -28px;
+        orphans: 2;
+        widows: 2;
+      }
+
+      .REF p {
+        font-size: 9pt;
+      }
+
+      .REF h2,
+      .footnotes h2 {
+        color: black;
+      }
+
+      .footnotes p {
+        font-size: 9pt;
+      }
+
+      .figcaption p {
+        margin-bottom: 20px;
+        padding-bottom: 5px;
+        color: #a3aaa7;
+        font-weight: normal;
+        font-size: 7pt;
+        font-family: var(--sans-font);
+        font-feature-settings: "dlig" 1, "onum" 1;
+        line-height: 12.554pt;
+        text-align: center;
+        -epub-hyphens: none;
+        hyphens: none;
+        border-bottom: 1px solid #ddd;
+        orphans: 1;
+        break-before: avoid;
+      }
+
+      .figcaption::before {
+        /* generated content for counters */
+        font-weight: normal;
+
+        /* content: "Figure " counter(figure) ": " */
+      }
+
+      .contributorFrench p {
+        color: darkgray;
+      }
+
+      /* Utility class: remove default italics / decoration from specific spans */
+      .nodecor {
+        font-style: normal;
+        text-decoration: none;
+      }
+
+      /* Merged media print block */
+
+      @page {
+        size: 7in 10in;
+        margin: 80pt 112pt 160pt 112pt;
+      }
+
+      /* Left pages: header top-left, footer bottom-left */
+      @page :left {
+        @top-left-corner {
+          content: string(chapter-short-title);
+          color: #999999;
+          font: 8.5pt/1.3 "Mulish", sans-serif;
+          font-style: italic;
+          text-transform: uppercase;
+          text-align: left;
+          vertical-align: bottom;
+          padding-left: 56pt;
+          padding-bottom: 30pt;
+          white-space: nowrap;
+        }
+
+        @bottom-left {
+          content: "$issue$ · " counter(page);
+          color: #999999;
+          font: 8.5pt/1.3 "Mulish", sans-serif;
+          font-style: italic;
+          text-transform: uppercase;
+          text-align: left;
+          vertical-align: top;
+          margin-left: -56pt;
+          padding-top: 60pt;
+          padding-left: 85pt;
+          white-space: nowrap;
+          background-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA5MTEuNjkgMTQ3Ljk3Ij4KICA8ZGVmcz4KICAgIDxzdHlsZT4KICAgICAgLmEsIC5kIHsKICAgICAgICBmaWxsOiAjZmZmOwogICAgICB9CgogICAgICAuYSB7CiAgICAgICAgc3Ryb2tlOiAjZmJiMDNiOwogICAgICB9CgogICAgICAuYSwgLmIgewogICAgICAgIHN0cm9rZS1taXRlcmxpbWl0OiAxMDsKICAgICAgfQoKICAgICAgLmIgewogICAgICAgIGZpbGw6IG5vbmU7CiAgICAgICAgc3Ryb2tlOiAjZWU0MDM2OwogICAgICAgIHN0cm9rZS13aWR0aDogNC44OHB4OwogICAgICB9CgogICAgICAuYyB7CiAgICAgICAgZmlsbDogI2VlNDAzNjsKICAgICAgfQoKICAgICAgLmUsIC5mIHsKICAgICAgICBmb250LXNpemU6IDE1LjI4cHg7CiAgICAgICAgZmlsbDogIzIzMWYyMDsKICAgICAgICBmb250LWZhbWlseTogVHJlbmRTYW5zT25lLCBUcmVuZCBTYW5zOwogICAgICB9CgogICAgICAuZSB7CiAgICAgICAgbGV0dGVyLXNwYWNpbmc6IC0wLjA2ZW07CiAgICAgIH0KCiAgICAgIC5mIHsKICAgICAgICBsZXR0ZXItc3BhY2luZzogLTAuMDZlbTsKICAgICAgfQogICAgPC9zdHlsZT4KICA8L2RlZnM+CiAgPGc+CiAgICA8cmVjdCBjbGFzcz0iYSIgeD0iMi40MiIgeT0iMi43MSIgd2lkdGg9IjkwNiIgaGVpZ2h0PSIxNDMiLz4KICAgIDxyZWN0IGNsYXNzPSJiIiB4PSIyLjQ0IiB5PSIyLjQ0IiB3aWR0aD0iOTA2LjgyIiBoZWlnaHQ9IjE0My4wOSIvPgogICAgPHJlY3QgY2xhc3M9ImMiIHg9IjguODYiIHk9IjguODEiIHdpZHRoPSI4OTMuOTgiIGhlaWdodD0iMTMwLjM1Ii8+CiAgPC9nPgogIDxnPgogICAgPHBhdGggY2xhc3M9ImQiIGQ9Ik0xODUuMTcsMTIxLjc1aC0xMmwtLjI5LTM5LjYtMjEuMjcsNDAuMTloLTQuMjJMMTI2LDgyLjg0bC0uMiwzOC45MUgxMTMuOTFsMi02OS4yaDUuMzlsMjguNjIsNTAuMTksMjcuOTQtNTAuMTloNS4zOVoiIHRyYW5zZm9ybT0idHJhbnNsYXRlKC0yMy4wOCAtMjMuOTMpIi8+CiAgICA8cGF0aCBjbGFzcz0iZCIgZD0iTTIxOCwxMjEuNzVIMjA1LjI3bDMyLjM1LTY5LjQ5aDIuNzRsMzIuMzUsNjkuNDloLTEzTDI1My41OSwxMDhIMjI0Wm0xMC4zLTIzLjQzaDIxTDIzOC43OSw3NC42MVoiIHRyYW5zZm9ybT0idHJhbnNsYXRlKC0yMy4wOCAtMjMuOTMpIi8+CiAgICA8cGF0aCBjbGFzcz0iZCIgZD0iTTM0OS43Miw4NS41OHYyOS41MXMtMTAuMjksNy44NC0yNi42Niw3Ljg0Yy0yMy4zMiwwLTM4LjgxLTE1LjI5LTM4LjgxLTM1LjY4LDAtMTkuOSwxNi43Ni0zNS41OCwzNy4xNS0zNS41OCwxNS4zOSwwLDI0LjMsNS41OSwyNC4zLDUuNTlsLTQuMjEsMTAuMzlzLTguOTItNC41MS0xOC00LjUxYy0xNi4xOCwwLTI2LjA4LDEwLjE5LTI2LjA4LDI0LjMxLDAsMTMuODIsMTAuNTksMjQsMjQuOSwyNEE0Ni41Myw0Ni41MywwLDAsMCwzMzgsMTA4LjcyVjk2LjQ3SDMxOC43NVY4NS41OFoiIHRyYW5zZm9ybT0idHJhbnNsYXRlKC0yMy4wOCAtMjMuOTMpIi8+CiAgICA8cGF0aCBjbGFzcz0iZCIgZD0iTTM3NS42MSw1Mi44NWgxMi4xNXY2OC45SDM3NS42MVoiIHRyYW5zZm9ybT0idHJhbnNsYXRlKC0yMy4wOCAtMjMuOTMpIi8+CiAgICA8cGF0aCBjbGFzcz0iZCIgZD0iTTQxNS4zOCw1Mi40NmgzLjgybDQyLjYzLDQ0LjR2LTQ0SDQ3NHY2OS4zOWgtMy4yNEw0MjcuNTMsNzl2NDIuNzRINDE1LjM4WiIgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoLTIzLjA4IC0yMy45MykiLz4KICAgIDxwYXRoIGNsYXNzPSJkIiBkPSJNNTA1LjgyLDEyMS43NUg0OTMuMDhsMzIuMzQtNjkuNDloMi43NWwzMi4zNCw2OS40OWgtMTNMNTQxLjQsMTA4SDUxMS44Wm0xMC4yOS0yMy40M2gyMUw1MjYuNiw3NC42MVoiIHRyYW5zZm9ybT0idHJhbnNsYXRlKC0yMy4wOCAtMjMuOTMpIi8+CiAgICA8cGF0aCBjbGFzcz0iZCIgZD0iTTU2My4wNyw1Mi44NUg2MjFWNjRINTk4LjM2djU3LjczSDU4Ni4xVjY0aC0yM1oiIHRyYW5zZm9ybT0idHJhbnNsYXRlKC0yMy4wOCAtMjMuOTMpIi8+CiAgICA8cGF0aCBjbGFzcz0iZCIgZD0iTTY0MS44OSw1Mi44NUg2NTR2NjguOUg2NDEuODlaIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgtMjMuMDggLTIzLjkzKSIvPgogICAgPHBhdGggY2xhc3M9ImQiIGQ9Ik03MTEuOSw1MS42N2MyMS4zNywwLDM2Ljg2LDE1LDM2Ljg2LDM1LjU4LDAsMjAuMjktMTUuNzgsMzUuNTgtMzYuODYsMzUuNThzLTM2Ljc1LTE1LjE5LTM2Ljc1LTM1LjU4QzY3NS4xNSw2Ny4zNSw2OTEuMjIsNTEuNjcsNzExLjksNTEuNjdabS4xLDYwLjQ4YzEzLjMzLDAsMjMuNzItMTAuNjksMjMuNzItMjQuN3MtOS45LTI0LjgtMjMuNzItMjQuOGMtMTMuNjIsMC0yMy43MiwxMC42OC0yMy43MiwyNC44QzY4OC4yOCwxMDEuMjcsNjk4LjY3LDExMi4xNSw3MTIsMTEyLjE1WiIgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoLTIzLjA4IC0yMy45MykiLz4KICAgIDxwYXRoIGNsYXNzPSJkIiBkPSJNNzY5Ljg2LDU0LjQ2aDMuODJsNDIuNjQsNDQuNHYtNDRoMTIuMTV2NjkuMzloLTMuMjNMNzgyLDgxdjQyLjc0SDc2OS44NloiIHRyYW5zZm9ybT0idHJhbnNsYXRlKC0yMy4wOCAtMjMuOTMpIi8+CiAgICA8cGF0aCBjbGFzcz0iZCIgZD0iTTg3My41MywxMjQuOTNBNDQuNTgsNDQuNTgsMCwwLDEsODUxLDExOC4zNmw0LjIyLTExYzUuNjgsMy44MiwxMi41NCw2LjE3LDE4LjcyLDYuMTcsOC4xNCwwLDExLjg2LTQsMTEuODYtOC40MywwLTQuNjEtMi41NS03LjM1LTE1LTEyLTEzLjQ0LTQuOS0xOC0xMS4yNy0xOC0xOS41LDAtMTAuMzksOC40My0yMCwyMy4xMy0yMGE0MC42NSw0MC42NSwwLDAsMSwxOSw0LjdMODkxLDY5LjE1Yy00LTIuMjUtMTAuMS00LjYtMTUuMzktNC42LTcuMjYsMC0xMC41OSw0LTEwLjU5LDguODIsMCw0LjQxLDMuNzMsNy4xNiwxMy40MywxMC42OCwxNS4zOSw2LDE5LjgsMTIuMDYsMTkuOCwyMS4wOEM4OTguMjMsMTE3LjM4LDg4OC45MiwxMjQuOTMsODczLjUzLDEyNC45M1oiIHRyYW5zZm9ybT0idHJhbnNsYXRlKC0yMy4wOCAtMjMuOTMpIi8+CiAgICA8dGV4dCBjbGFzcz0iZSIgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoNDk4LjcxIDEyMS40Mikgc2NhbGUoMC45NiAxKSI+Sk9VUk5BTCBPRiBDUk9TUy1DVUxUVVJBTCBJTUFHRSBTVFVESUVTPC90ZXh0PgogICAgPHRleHQgY2xhc3M9ImYiIHRyYW5zZm9ybT0idHJhbnNsYXRlKDczLjAyIDEyMS44Nikgc2NhbGUoMC45NiAxKSI+UkVWVUUgROKAmcOJVFVERVMgSU5URVJDVUxUVVJFTExFUyBERSBM4oCZSU1BR0U8L3RleHQ+CiAgICA8cmVjdCBjbGFzcz0iZCIgeD0iNDgxLjU5IiB5PSIxMTQuNDQiIHdpZHRoPSI0LjMzIiBoZWlnaHQ9IjQuMzIiLz4KICAgIDxnPgogICAgICA8cG9seWdvbiBjbGFzcz0iZCIgcG9pbnRzPSIzNy41OSA1Mi4yMSAzNy4zIDUyLjIxIDM3LjMxIDUxLjg0IDUzLjYxIDI4LjI0IDU0LjAyIDI4LjQ2IDM3LjU5IDUyLjIxIi8+CiAgICAgIDxwb2x5Z29uIGNsYXNzPSJkIiBwb2ludHM9IjQ5LjkyIDUxLjkzIDQ5LjMzIDUxLjkgNjUuOTIgMjguNjUgNjYuMyAyOS4wNiA0OS45MiA1MS45MyIvPgogICAgICA8cGF0aCBjbGFzcz0iZCIgZD0iTTc2LjY4LDUyLjE5aDEyLjdWMTIyLjdINzYuNjhaIiB0cmFuc2Zvcm09InRyYW5zbGF0ZSgtMjMuMDggLTIzLjkzKSIvPgogICAgICA8cGF0aCBkPSJNNjAuMzgsNzUuNzVoMTIuN3Y3MC41MUg2MC4zOFoiIHRyYW5zZm9ybT0idHJhbnNsYXRlKC0yMy4wOCAtMjMuOTMpIi8+CiAgICAgIDxwb2x5Z29uIGNsYXNzPSJkIiBwb2ludHM9IjM3LjcxIDEyMi4zNiAzNy4zIDEyMi4zNCAzNy4zIDEyMi4wNiA1My43MiA5OC4yNyA1NC4xMiA5OC41NiAzNy43MSAxMjIuMzYiLz4KICAgICAgPHBvbHlnb24gY2xhc3M9ImQiIHBvaW50cz0iNTAgMTIyLjM0IDQ5LjM2IDEyMi4zNiA2NS45MiA5OC40NiA2Ni4zIDk4Ljc4IDUwIDEyMi4zNCIvPgogICAgPC9nPgogIDwvZz4KPC9zdmc+Cg==");
+          background-repeat: no-repeat;
+          background-size: 80pt 12pt;
+          background-position: 0pt 57pt;
+        }
+      }
+
+      /* Right pages: header top-right, footer bottom-right - mirrors left page */
+      @page :right {
+        @top-right {
+          content: string(chapter-short-author);
+          color: #999999;
+          font: 8.5pt/1.3 "Mulish", sans-serif;
+          font-style: italic;
+          text-transform: uppercase;
+          text-align: right;
+          vertical-align: bottom;
+          margin-right: -56pt;
+          padding-bottom: 30pt;
+          white-space: nowrap;
+        }
+
+        @bottom-right {
+          content: "Issue $issue$ · " counter(page);
+          color: #999999;
+          font: 8.5pt/1.3 "Mulish", sans-serif;
+          font-style: italic;
+          text-transform: uppercase;
+          text-align: right;
+          vertical-align: top;
+          margin-right: -56pt;
+          padding-top: 60pt;
+          white-space: nowrap;
+        }
+      }
+
+      @page :blank {
+        @top-left-corner { content: none; }
+        @top-right { content: none; }
+        @bottom-left { content: none; background: none; }
+        @bottom-right { content: none; }
+      }
+
+      @page :first {
+        margin-top: 160pt;
+        @top-left-corner { content: none; }
+        @top-right { content: none; }
+        @bottom-left { content: none; background: none; }
+        @bottom-right { content: none; }
+      }
+
+      body {
+        padding: 0;
+        margin: 0;
+        break-before: right;
+      }
+
+      figure {
+        float: top;
+        page-break-inside: avoid;
+      }
+
+      img {
+        object-fit: cover;
+      }
+
+      /* Tall figures (e.g. vertical flowcharts) must not run into the footer:
+         cap height and preserve aspect ratio inside the type area. */
+      figure img {
+        max-width: 100%;
+        max-height: 5.8in;
+        width: auto;
+        height: auto;
+        object-fit: contain;
+      }
+
+      /* Near-full-page images that step out of the column but stay inside page margins */
+      .fullpage {
+        margin-left: 0;
+        margin-right: 0;
+        margin-top: 20pt;
+        margin-bottom: 20pt;
+        page-break-inside: avoid;
+        width: 100%;
+        display: block;
+      }
+
+      .fullpage img {
+        display: block;
+        width: 100%;
+        height: auto;
+        margin-left: auto;
+        margin-right: auto;
+        max-height: 7.5in;
+        object-fit: contain;
+      }
+
+      ol>li {
+        font-family: "Linux Libertine O", serif;
+        font-feature-settings: "onum" 1, "lfbd" 1, "rtbd" 1;
+      }
+
+      .print_only {
+        display: block;
+      }
+
+      .online_only {
+        display: none;
+      }
+
+      .frame {
+        display: none;
+      }
+
+      .short_title {
+        display: none;
+        string-set: chapter-short-title content();
+      }
+
+      .short_author {
+        display: none;
+        string-set: chapter-short-author content();
+      }
+    }
+  </style>
+</head>
+
+<body onload="snap(18, 'h1, img', 'height')">
+  <header id="title-block-header">
+    <div class="short_title" id="short_title">$if(short_title)$$short_title$$else$$title.en_US$$endif$</div>
+    <div class="short_author" id="short_author">$if(short_author)$$short_author$$else$$for(authors)$$authors.familyName.en_US$$sep$, $endfor$$endif$</div>
+    <h1 class="title" style="counter-reset: page $start_page$">$title.en_US$</h1>
+    <div class="author">
+$for(authors)$
+      <p>$authors.givenName.en_US$ $authors.familyName.en_US$</p>
+$endfor$
+    </div>
+    <div class="displayFlexbox">
+      $if(abstract.en_US)$<div class="abstract displayFlexItemLeft" id="abstract">$abstract.en_US$</div>$endif$
+      $if(abstract.fr_CA)$<div class="abstract displayFlexItemRight" id="abstract_fr" lang="fr">$abstract.fr_CA$</div>$endif$
+    </div>
+  </header>
+  <article>
+    <hr>
+    $body$
+  </article>
+</body>
+
+</html>

@@ -1,0 +1,111 @@
+/*
+ * Prince user stylesheet applied ONLY when generating the complete-issue PDF
+ * (passed via `prince --style=...`).
+ *
+ * Goal:
+ *   Make every chapter's title page in the merged PDF match the look of a
+ *   single-article PDF — no running header AND no page-number footer.
+ *
+ * Why this is non-trivial:
+ *   The article template defines `@page :first { @top-* { content: normal }
+ *   @bottom-* { content: normal } }` which works for a single-article PDF.
+ *   When Prince concatenates multiple article HTML files, however, `:first`
+ *   only matches the very first page of the combined output, so chapters 2..N
+ *   pick up the running header AND footer from `@page :left` / `@page :right`
+ *   on their title page.
+ *
+ * Two-pronged fix:
+ *
+ *   1. Switch each ARTICLE body to a named "chapter" page and apply
+ *      `prince-page-group: start`. Per the Prince docs, page-groups are tied
+ *      to named pages, so this is the documented way to make `:first` match
+ *      the first page of every chapter. `@page chapter:first` then suppresses
+ *      both the running header and the page-number footer on each chapter's
+ *      title page. We scope this with `body[onload]` so `front_page.html`
+ *      and `front_matter.html` (plain `<body>`) keep their own page rules.
+ *
+ *   2. Belt-and-braces: even if (1) doesn't make `@page chapter:first` match
+ *      (Prince's behavior across concatenated input files has historically
+ *      been inconsistent), use Prince's `first-except` page-policy keyword
+ *      on the running-header strings. `string(name, first-except)` returns
+ *      no value on the page where the named string was set — i.e. the
+ *      chapter title page, where the hidden `.short_title` / `.short_author`
+ *      spans live in the body — and the carried-over value on every other
+ *      page. This keeps the running header clean even if (1) is silently a
+ *      no-op. (The footer, which uses `counter(page)` rather than a named
+ *      string, can't be suppressed this way and depends on (1).)
+ *
+ *   `!important` is needed because per-article `<style>` blocks define the
+ *   same selectors at equal specificity. Other margin-box properties (font,
+ *   color, padding, background-image) are left untouched so the running
+ *   header on non-title pages keeps its existing styling.
+ *
+ * Initial two-page spread (PDF viewer preferences):
+ *   Front matter HTML does not carry `@prince-pdf` from the article template.
+ *   Many in-browser PDF viewers and macOS Preview ignore PageLayout; Acrobat
+ *   and several desktop readers typically honor it.
+ */
+
+@prince-pdf {
+	prince-pdf-page-layout: two-page-right;
+	prince-pdf-page-mode: show-bookmarks;
+}
+
+/* (1) Named "chapter" page-group per article body. */
+body[onload] {
+	page: chapter !important;
+	prince-page-group: start !important;
+}
+
+@page chapter:first {
+	margin-top: 160pt !important;
+	@top-left {
+		content: normal !important;
+	}
+	@top-right {
+		content: normal !important;
+	}
+	@bottom-left {
+		content: normal !important;
+	}
+	@bottom-right {
+		content: normal !important;
+	}
+}
+
+/* (2) Header safety net via `first-except`. */
+@page :left {
+	@top-left {
+		content: string(chapter-short-title, first-except) !important;
+	}
+}
+
+@page :right {
+	@top-right {
+		content: string(chapter-short-author, first-except) !important;
+	}
+}
+
+/* (3) Blank pages (left page inserted between an odd-ending chapter and the
+ * next chapter that forces `break-before: right`) must stay completely
+ * empty. The article template already does this with `@page :blank`, but
+ * the `!important` in (2) above would otherwise put the chapter title back
+ * in `@top-left` on the blank left page. Re-assert the suppression here
+ * with `!important` and AFTER the `:left` / `:right` rules so it wins on
+ * blank pages. The `@bottom-*` already render correctly without `!important`
+ * because the article template's `@page :blank` declaration order beats
+ * its own `@page :left` / `@page :right`. */
+@page :blank {
+	@top-left {
+		content: normal !important;
+	}
+	@top-right {
+		content: normal !important;
+	}
+	@bottom-left {
+		content: normal !important;
+	}
+	@bottom-right {
+		content: normal !important;
+	}
+}

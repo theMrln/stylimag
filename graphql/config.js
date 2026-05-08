@@ -297,6 +297,25 @@ module.exports = convict({
       default: 25 * 1024 * 1024,
     },
   },
+  pipeline: {
+    serviceUrl: {
+      format: String,
+      env: 'PIPELINE_SERVICE_URL',
+      default: '',
+      nullable: true,
+    },
+    authToken: {
+      format: String,
+      sensitive: true,
+      env: 'PIPELINE_AUTH_TOKEN',
+      default: '',
+    },
+    requestTimeoutMs: {
+      format: 'int',
+      env: 'PIPELINE_REQUEST_TIMEOUT_MS',
+      default: 10_000,
+    },
+  },
   collaboration: {
     updateWorkingCopyIntervalMs: {
       format: 'int',

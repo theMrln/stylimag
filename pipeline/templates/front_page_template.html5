@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html dir='ltr' lang='en'>
+
+<head>
+    <meta charset='utf-8'>
+    <title>$title.en_US$</title>
+    <style>
+        @page {
+            size: 7in 10in;
+            margin: 0;
+        }
+
+        html,
+        body,
+        div,
+        header,
+        p,
+        blockquote,
+        ul,
+        ol,
+        li,
+        pre {
+            margin: 0;
+            padding: 0;
+            hyphens: none;
+        }
+
+        body {
+            --the-text-color: #080000;
+            --the-text-color-alt: #ee4036;
+            background-color: #151515;
+            /* When `front_page_cover_image` is set (SvelteKit / Tauri), use the
+               issue metadata cover (`coverImage` / `coverImageUrl`). Otherwise
+               keep the legacy `img/issue_cover_img.png` path for bare pandoc. */
+            $if(front_page_cover_image)$ background-image: url("$front_page_cover_image$");
+            $else$ background-image: url(img/issue_cover_img.png);
+            $endif$ background-position: center top;
+            background-size: auto 100%;
+            background-repeat: no-repeat;
+        }
+
+        #contributors {
+            position: absolute;
+            left: 3.8in;
+            top: 0.2in;
+            padding-top: 0.2in;
+            padding-left: 0.3in;
+            padding-right: 0.33in;
+            padding-bottom: 0.2in;
+            color: var(--the-text-color);
+            background-color: rgba(255, 255, 255, 0);
+            /* text-shadow: 0.5px 0.5px 0px rgba(0, 0, 0, 0.5); */
+            font-family: 'Muli SemiBold', sans-serif;
+            font-size: 11pt;
+            font-weight: bolder;
+            line-height: 16pt;
+            font-style: italic;
+            text-align: right;
+            text-transform: uppercase;
+            z-index: 2;
+        }
+
+        #lower-third {
+            display: none;
+            position: absolute;
+            left: 0n;
+            top: 0in;
+            width: 7in;
+            height: 7in;
+            margin: 0;
+            background: rgba(131, 132, 139, 0.78);
+            z-index: 1;
+        }
+
+        #imaginations-logo {
+            position: absolute;
+            left: 0.6in;
+            top: 7.8in;
+            z-index: 1000;
+        }
+
+        #issue-title {
+            position: absolute;
+            left: 56px;
+            top: 8.9in;
+            font-family: 'Muli ExtraBold', sans-serif;
+            /* color: #EE4037; */
+            color: var(--the-text-color);
+            font-size: 18pt;
+            line-height: 21pt;
+            font-style: italic;
+            text-align: left;
+            text-transform: uppercase;
+            z-index: 2;
+        }
+
+        #issue-editor {
+            position: absolute;
+            left: 56px;
+            right: 2.5in;
+            top: 9.2in;
+            font-family: 'Muli', sans-serif;
+            font-size: 12pt;
+            font-style: italic;
+            color: var(--the-text-color);
+            z-index: 3;
+        }
+
+        #issue {
+            position: absolute;
+            left: 5in;
+            top: 9.5in;
+            font-family: 'Muli', sans-serif;
+            font-size: 12pt;
+            font-style: italic;
+            color: var(--the-text-color);
+            z-index: 4;
+        }
+    </style>
+</head>
+
+<body>
+    <div id='contributors' style='display:flex; justify-content: space-between;'>
+
+        <div id='contributorlist'>
+            $for(authors)$
+            $if(authors.givenName)$$authors.givenName$$endif$$if(authors.familyName)$ $authors.familyName$$endif$<br />
+            $endfor$
+        </div>
+    </div>
+    <div id='issue-title'>$title.en_US$</div>
+    <div id='issue-editor'>Guest Editors: $for(editors)$$editors.given_name$ $editors.family_name$$sep$, $endfor$</div>
+    <div id='lower-third'>&nbsp;</div>
+    <div id='issue'>Issue $volume$-$number$, $year$</div>
+    <div id='imaginations-logo'>
+        <img src='img/imaginations-logo.svg' width='560' />
+    </div>
+</body>
+
+</html>

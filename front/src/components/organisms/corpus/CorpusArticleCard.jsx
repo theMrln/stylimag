@@ -2,6 +2,8 @@ import { useRef } from 'react'
 import { useDrag, useDrop } from 'react-dnd'
 import { Link } from 'react-router'
 
+import BuildArticleButton from '../production/BuildArticleButton.jsx'
+
 import styles from './corpusArticleCard.module.scss'
 
 /**
@@ -34,7 +36,13 @@ function formatAuthors(authors) {
     .join('; ')
 }
 
-export default function CorpusArticleCard({ id, article, index, moveCard }) {
+export default function CorpusArticleCard({
+  id,
+  article,
+  index,
+  moveCard,
+  corpusId,
+}) {
   const ref = useRef(null)
   const [{ handlerId }, drop] = useDrop({
     accept: 'card',
@@ -133,6 +141,14 @@ export default function CorpusArticleCard({ id, article, index, moveCard }) {
           ) : null
         })()}
       </div>
+      {corpusId && (
+        <div className={styles.actions}>
+          <BuildArticleButton
+            articleId={article._id}
+            corpusId={corpusId}
+          />
+        </div>
+      )}
     </div>
   )
 }

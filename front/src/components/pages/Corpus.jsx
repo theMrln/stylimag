@@ -14,6 +14,7 @@ import Modal from '../molecules/Modal.jsx'
 import CorpusForm from '../organisms/corpus/CorpusForm.jsx'
 import CorpusItem from '../organisms/corpus/CorpusItem.jsx'
 import OjsImportModal from '../organisms/corpus/OjsImportModal.jsx'
+import PipelineHealthBadge from '../organisms/production/PipelineHealthBadge.jsx'
 import WorkspaceLabel from '../organisms/workspace/WorkspaceLabel.jsx'
 
 import styles from './Corpus.module.scss'
@@ -60,6 +61,7 @@ export default function Corpus() {
             {tCommon('ojs.import.buttonProduction')}
           </Button>
         )}
+        <PipelineHealthBadge />
       </header>
       <WorkspaceLabel color={workspace.color} name={workspace.name} />
       <p className={styles.introduction}>{t('description')}</p>

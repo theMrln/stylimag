@@ -88,19 +88,23 @@ export default function CorpusArticleItems({
       return orderedArticles
     })
   }, [])
-  const renderCard = useCallback((card, index) => {
-    return (
-      <CorpusArticleCard
-        key={card._id}
-        index={index}
-        id={card._id}
-        article={card}
-        moveCard={(dragIndex, hoverIndex) => {
-          moveArticleCard(dragIndex, hoverIndex)
-        }}
-      />
-    )
-  }, [])
+  const renderCard = useCallback(
+    (card, index) => {
+      return (
+        <CorpusArticleCard
+          key={card._id}
+          index={index}
+          id={card._id}
+          article={card}
+          corpusId={corpusId}
+          moveCard={(dragIndex, hoverIndex) => {
+            moveArticleCard(dragIndex, hoverIndex)
+          }}
+        />
+      )
+    },
+    [corpusId, moveArticleCard]
+  )
 
   if (isLoading) {
     return <Loading />

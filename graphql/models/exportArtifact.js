@@ -14,7 +14,6 @@ const exportArtifactSchema = new Schema(
     article: {
       type: Schema.Types.ObjectId,
       ref: 'Article',
-      required: true,
       index: true,
     },
     version: {
@@ -25,6 +24,33 @@ const exportArtifactSchema = new Schema(
     workspace: {
       type: Schema.Types.ObjectId,
       ref: 'Workspace',
+      index: true,
+    },
+    corpus: {
+      type: Schema.Types.ObjectId,
+      ref: 'Corpus',
+      index: true,
+    },
+    pipelineJob: {
+      type: Schema.Types.ObjectId,
+      ref: 'PipelineJob',
+      index: true,
+    },
+    /**
+     * Logical kind of artefact, distinguishing publisher pipeline outputs
+     * (article-cover, toc, front-page, complete-issue) from the legacy
+     * article-only export flow (article-html / article-pdf).
+     */
+    kind: {
+      type: String,
+      enum: [
+        'article-html',
+        'article-pdf',
+        'article-cover',
+        'toc',
+        'front-page',
+        'complete-issue',
+      ],
       index: true,
     },
     requestedBy: {

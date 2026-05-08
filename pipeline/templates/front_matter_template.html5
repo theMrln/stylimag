@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<!-- /*This is the template for the generated front matter. Any changes made here will be reflected in the generated front matter.*/ -->
+
+<head>
+    <meta charset='utf-8'>
+    <title>$title.en_US$</title>
+    <style>
+        @page {
+            size: 7in 10in;
+            margin: 0;
+        }
+
+        @page toc-page {
+            size: 7in 10in;
+            margin-top: 1in;
+            margin-bottom: 1.5in;
+            margin-left: 0;
+            margin-right: 0;
+        }
+
+        html,
+        body,
+        div,
+        header,
+        p,
+        blockquote,
+        ul,
+        ol,
+        li,
+        pre {
+            margin: 0;
+            padding: 0;
+            hyphens: none;
+        }
+
+        body {
+            background-color: white;
+        }
+
+        /* the first page (DIVs like outside cover, more or less) */
+
+        #contributorList {
+            position: absolute;
+            left: 3.5in;
+            top: 0.6in;
+            padding-top: 0.2in;
+            padding-left: 3em;
+            padding-right: 3em;
+            padding-bottom: 0.5in;
+            max-height: 6.4in;
+            overflow: visible;
+            color: black;
+            font-family: 'Muli SemiBold', sans-serif;
+            font-size: 8pt;
+            line-height: 12pt;
+            font-style: italic;
+            text-align: left;
+            text-transform: uppercase;
+            z-index: 1;
+        }
+
+        #imaginations-logo {
+            position: absolute;
+            left: 56px;
+            top: 7.4in;
+            background-color: white;
+            z-index: 2;
+        }
+
+        #issue-title {
+            position: absolute;
+            left: 56px;
+            top: 8.3in;
+            font-family: 'Muli ExtraBold', sans-serif;
+            color: gray;
+            font-size: 18pt;
+            line-height: 21pt;
+            font-style: italic;
+            text-align: left;
+            text-transform: uppercase;
+            z-index: 2;
+        }
+
+        #issue-editor {
+            position: absolute;
+            left: 56px;
+            right: 1.7in;
+            top: 8.6in;
+            font-family: "Muli", sans-serif;
+            font-size: 12pt;
+            font-style: italic;
+            color: #807c7e;
+            z-index: 3;
+        }
+
+        #issue {
+            position: absolute;
+            left: 5.2in;
+            top: 9.5in;
+            font-family: 'Muli', sans-serif;
+            font-size: 10pt;
+            font-style: italic;
+            color: grey;
+            break-after: page;
+        }
+
+        /* the second page */
+        #issue-title-top {
+            position: absolute;
+            left: 1.3in;
+            top: 0.6in;
+            padding-right: 0.4in;
+            font-family: 'Muli';
+            color: rgb(241, 88, 68);
+            font-size: 14pt;
+            line-height: 18pt;
+            text-align: left;
+            text-transform: uppercase;
+        }
+
+        #issue-top {
+            position: absolute;
+            left: 5.2in;
+            top: 0.4in;
+            font-family: 'Muli', sans-serif;
+            font-size: 10pt;
+            font-style: italic;
+            color: gray;
+        }
+
+        #guest-editor {
+            position: absolute;
+            left: 1.3in;
+            right: 1.5in;
+            top: 0.9in;
+            font-family: 'Muli', sans-serif;
+            font-size: 12pt;
+            color: gray;
+        }
+
+        #imaginations-team-title {
+            position: absolute;
+            left: 1.3in;
+            top: 1.4in;
+            text-align: left;
+        }
+
+        #imaginations-team-title h1 {
+            font-family: 'Muli', sans-serif;
+            font-size: 12pt;
+            color: rgb(241, 88, 68);
+            margin: 0;
+            margin-bottom: 0.2in;
+            text-transform: uppercase;
+            font-weight: normal;
+            font-style: normal;
+        }
+
+        #team {
+            position: absolute;
+            right: 0in;
+            top: 1.4in;
+            padding-right: 0.9in;
+            font-family: 'Muli Light', sans-serif;
+            color: gray;
+            font-size: 8pt;
+            line-height: 10.5pt;
+            font-style: italic;
+            text-align: right;
+            text-transform: none;
+        }
+
+        #team-goose {
+            position: absolute;
+            left: 0in;
+            top: 1.4in;
+            padding-left: 0.9in;
+            font-family: 'Muli Light', sans-serif;
+            color: gray;
+            font-size: 8pt;
+            line-height: 10.5pt;
+            font-style: italic;
+            text-align: left;
+        }
+
+        #team-goose h1 {
+            font-family: 'Muli', sans-serif;
+            font-size: 12pt;
+            color: rgb(241, 88, 68);
+            margin-top: 0;
+            margin-bottom: 0.2in;
+            text-transform: uppercase;
+            font-weight: normal;
+            font-style: normal;
+        }
+
+        #csi-logo {
+            position: absolute;
+            left: 1.3in;
+            top: 8.3in;
+            background-color: white;
+            z-index: 2;
+        }
+
+        #sshrc-logo {
+            position: absolute;
+            left: 1.3in;
+            top: 8.9in;
+            background-color: white;
+            z-index: 2;
+        }
+
+        #prince-logo {
+            /* display: none; */
+            position: absolute;
+            left: 3.5in;
+            top: 8.5in;
+            background-color: white;
+            z-index: 2;
+        }
+
+        #doi {
+            display: none;
+            position: absolute;
+            left: 3.8in;
+            top: 8.8in;
+            font-family: 'Muli Light', sans-serif;
+            color: gray;
+            font-size: 8pt;
+            font-style: italic;
+            text-align: left;
+            text-transform: uppercase;
+        }
+
+        #financial-support {
+            position: absolute;
+            left: 1.3in;
+            top: 9.2in;
+            padding-right: 0.9in;
+            font-family: 'Muli Light', sans-serif;
+            color: gray;
+            font-size: 8pt;
+            line-height: 10pt;
+            font-style: italic;
+            text-align: left;
+            text-transform: none;
+            break-after: page;
+        }
+
+        /* the TOC page */
+        #table-of-contents {
+            page: toc-page;
+            page-break-before: always;
+            position: relative;
+            margin-left: 1.3in;
+            margin-right: 1.3in;
+            padding-right: 0.6in;
+            font-family: 'Muli Light', sans-serif;
+            color: gray;
+            font-size: 9pt;
+            line-height: 11pt;
+            font-style: italic;
+            text-align: left;
+            text-transform: none;
+        }
+
+        #image-credit {
+            float: bottom;
+            border-style: solid;
+            border-width: 0.5px 0 0 0;
+            border-color: gray;
+            margin-left: 1.3in;
+            margin-right: 0.9in;
+            padding-top: 0.1in;
+            font-family: 'Muli SemiBold', sans-serif;
+            color: gray;
+            font-size: 8pt;
+            line-height: 11pt;
+            text-align: left;
+        }
+
+        /* classes for formatting */
+        h2 {
+            font-family: 'Muli SemiBold', sans-serif;
+            font-style: normal;
+            color: black;
+            font-size: 9pt;
+            line-height: 10pt;
+            text-align: left;
+        }
+
+        .team-heading {
+            margin-top: 0.0625in;
+            font-family: 'Muli', sans-serif;
+            color: gray;
+            font-size: 9pt;
+        }
+
+        .Credits-Red-Name {
+            color: rgb(241, 88, 68);
+        }
+
+        .toc-heading {
+            margin-bottom: 0.3in;
+            font-family: 'Muli SemiBold', sans-serif;
+            font-style: normal;
+            color: black;
+            font-size: 9pt;
+            line-height: 11pt;
+            text-align: left;
+        }
+
+        .toc-sub-heading {
+            margin-top: 11pt;
+            margin-bottom: 0;
+            font-family: 'Muli SemiBold', sans-serif;
+            font-style: normal;
+            color: black;
+            font-size: 9pt;
+            line-height: 11pt;
+            text-align: left;
+            page-break-after: avoid;
+        }
+
+        .toc-title {
+            margin-top: 0.1in;
+            color: rgb(241, 88, 68);
+            page-break-inside: avoid;
+            page-break-after: avoid;
+        }
+
+        .toc-title a {
+            font-family: 'Muli Light', sans-serif;
+            font-size: 9pt;
+            line-height: 11pt;
+            color: rgb(241, 88, 68);
+            font-style: italic;
+            text-align: left;
+            text-decoration: none;
+            text-transform: none;
+        }
+
+        .toc-author {
+            padding-left: 0.125in;
+            page-break-inside: avoid;
+            page-break-after: auto;
+        }
+
+        .page-number {
+            color: gray;
+            white-space: nowrap;
+        }
+
+        .toc-anchor a {
+            color: gray;
+            text-decoration-line: underline !important;
+            text-decoration-style: dotted !important;
+        }
+
+        .acknowledgements h1 {
+            page-break-before: always;
+            hyphens: none;
+            -epub-hyphens: none;
+            -webkit-column-span: all;
+            /* Chrome, Safari, Opera */
+            column-span: all;
+            color: #e9362c;
+            padding-top: 1.5in;
+            font-family: "Muli SemiBold", sans-serif;
+            font-size: 12.5px;
+            font-weight: 500;
+            line-height: 19pt;
+            margin-bottom: 6px;
+            text-align: center;
+            text-transform: uppercase;
+        }
+
+        .acknowledgements p {
+            -webkit-hyphens: auto;
+            -ms-hyphens: auto;
+            hyphens: auto;
+            margin-left: 1.5in;
+            margin-right: 1.5in;
+            color: #1c1b1a;
+            font-family: "Linux Libertine O", serif;
+            font-feature-settings: "onum" 1;
+            font-variant-numeric: oldstyle-nums;
+            font-size: 10pt;
+            font-style: normal;
+            font-weight: normal;
+            line-height: 130%;
+            margin-bottom: 6pt;
+            orphans: 2;
+            page-break-after: auto;
+            page-break-before: auto;
+            text-align: justify;
+            text-align-last: left;
+            widows: 2;
+            vertical-align: baseline;
+            counter-increment: paragraph;
+        }
+    </style>
+</head>
+
+<body>
+    <p style="page-break-after: always;">&nbsp;</p>
+    <div id='contributorList'>
+        <p class='Credits-Red-Name'> Contributors </p>
+        $for(authors)$
+        $if(authors.givenName)$$authors.givenName$$endif$$if(authors.familyName)$ $authors.familyName$$endif$<br>
+        $endfor$
+    </div>
+    <div id='imaginations-logo'>
+        <img src='img/Imaginations-logo-whitebkgd-cmyk.svg' width='560' />
+    </div>
+    <div id='goose-logo'>
+        <img src='img/the_goose.svg' width="370">
+    </div>
+    <div id='issue-title'>$title.en_US$</div>
+    <div id="issue-editor"> Guest Editors: $for(editors)$$editors.given_name$ $editors.family_name$$sep$, $endfor$</div>
+    <div id='issue'>Issue $volume$-$number$, $year$</div>
+    <!-- page 2 -->
+    <div id='issue-title-top'>$title.en_US$</div>
+    <div id='guest-editor'>Guest Editors: $for(editors)$$editors.given_name$ $editors.family_name$$sep$, $endfor$</span>
+    </div>
+    <div id='imaginations-team-title'>
+        <h1>Imaginations Editorial Team</h1>
+    </div>
+    <!-- <div id='issue-top'>Issue 11-3, 2020</div> -->
+    <div id='team'>
+        <p class='team-heading'>Editor in Chief | Rédacteur en chef</p>
+        <p><span class='Credits-Red-Name'>Markus Reisenleitner</span></p>
+        <p class='team-heading'>Managing Editor | Rédacteur</p>
+        <p><span class='Credits-Red-Name'>Brent Ryan Bellamy</span></p>
+        <p class='team-heading'>Managing Editor | Rédacteur</p>
+        <p><span class='Credits-Red-Name'>Margot Mellet</span></p>
+        <p class='team-heading'>Editorial Team | Comité de rédaction</p>
+        <p>Lee D. Campbell, Antara Dey, David Duhamel, Chiara Gius, <br>Bahareh Jahandoost, Dominique Laurent, M.E. Luka, Nanditha Narayanamoorthy</p> <!-- <p class='team-heading'>Elicitations Reviews Editor | Comptes rendus critiques – Élicitations</p>          <p>Margot Mellet</p> -->
+        <p class='team-heading'>Web Editor | Mise en forme web</p>
+        <p>Brent Ryan Bellamy</p>
+        <p class='team-heading'>French Translator &amp; Copy Editor | Traductions françaises</p>
+        <p>Gwladys Bertin, Dominique Laurent</p>
+        <p class='team-heading'>English Substantive &amp; Copy Editor | Rédacteur</p>
+        <p>Lee D. Campbell / Ben Robbins</p>
+        <p class='team-heading'>Founding Editors | Fondateurs</p>
+        <p>William Anselmi, Daniel Laforest, Carrie Smith-Prei, Sheena Wilson</p>
+        <p class='team-heading'>Previous Team Members | Anciens membres de l’équipe</p>
+        <p>Gülbin Özdamar Akarçay, Laura Bisaillon, Jason Crawford, Lina El-Shamy,<br>Marine Gheno, Dennis Kilfoy, Daniel Laforest, Andriko Lozowy,<br>Aurélie Lesueur, Tara Milbrandt, John Montague, Saša Rajsic,<br>Shama Rangwala, Lars Richter, Katherine Rollans, <br />Angela Sacher, Dalbir Sehmby, Justin Sully</p>
+        <p class='team-heading'>Editorial Advisory Board | Comité scientifique</p>
+        <p>Hester Baer, University of Maryland College Park, United States</p>
+        <p>Mieke Bal, University of Amsterdam &amp; Royal Netherlands Academy <br />of Arts and Sciences, Netherlands </p>
+        <p>Andrew Burke, University of Winnipeg, Canada</p>
+        <p>Ollivier Dyens, Concordia University, Canada</p>
+        <p>Michèle Garneau, Université de Montréal, Canada</p>
+        <p>Wlad Godzich, University of California Santa Cruz, United States</p>
+        <p>Kosta Gouliamos, European University, Cyprus</p>
+        <p>Faye Hammill, University of Strathclyde, United Kingdom</p>
+        <p>Anton Kaes, University of California Berkeley, United States</p>
+        <p>Dominic McIver Lopes, University of British Columbia, Canada</p>
+        <p>Sarah McGaughey, Dickinson College, United States</p>
+        <p>Marie-Dominique Popelard, Université de la Sorbonne Nouvelle - Paris, France</p>
+        <p>Christine Ramsay, University of Regina, Canada</p>
+        <p>Laurence A. Rickels, Academy of Fine Arts, Karlsruhe, Germany</p>
+        <p>Carrie Smith, University of Alberta, Canada</p>
+        <p>Will Straw, McGill Univeristy, Canada</p>
+        <p>Imre Szeman, University of Alberta, Canada</p>
+        <p>Sheena Wilson, University of Alberta, Canada</p>
+    </div>
+    <div id='csi-logo'>
+        <img src='img/CSI_logo.jpg' width='180'>
+    </div>
+    <div id='sshrc-logo'>
+        <img src='img/SSHRC-support-logo-long.jpg' width='470'>
+    </div>
+    <div id='prince-logo'>
+        <img src='img/prince-logo.png' width='80'>
+    </div>
+    <div id='doi'><a href='$doi$' target='_blank'>$doi$</a> </div>
+    <div id='financial-support'><em>Imaginations</em> is supported by the Social Sciences and Humanities Research Council of Canada, the Faculty of Liberal Arts and Professional Studies at York University, and the Department of Humanities at York University.<br> PDF conversion software is provided by princexml (YesLogic Pty. Ltd.). </div>
+    <!-- Add acknowledgements on the inside page here. -->
+    <!-- page 3 -->
+
+    <div id='table-of-contents'>
+        <p class='toc-heading'>Sommaire/Contents</p>
+
+        $for(toc_sections)$
+        <!-- Section heading -->
+        $if(toc_sections.section_title)$
+        <p class='toc-sub-heading'>$toc_sections.section_title$</p>
+        $endif$
+
+        <!-- Articles in this section -->
+        $for(toc_sections.articles)$
+        <p class='toc-title'>
+            <a href="$toc_sections.articles.id$/$toc_sections.articles.id$.html" class="toc-link">$toc_sections.articles.title$</a>
+            <span class='page-number'> • $toc_sections.articles.start_page$</span>
+        </p>
+        <p class='toc-author'>$toc_sections.articles.author$</p>
+        $endfor$
+
+        $endfor$
+
+        <div id='image-credit'> Image Credit: $imageCredit$ </div>
+    </div>
+</body>
+
+</html>

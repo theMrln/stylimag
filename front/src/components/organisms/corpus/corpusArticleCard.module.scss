@@ -29,3 +29,12 @@
   color: #6b7280;
   user-select: none;
 }
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-left: auto;
+  cursor: default;
+}
+
