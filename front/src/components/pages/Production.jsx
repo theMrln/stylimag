@@ -10,6 +10,7 @@ import OjsPushPanel from '../organisms/production/OjsPushPanel.jsx'
 import PageNumberSyncPanel from '../organisms/production/PageNumberSyncPanel.jsx'
 import PipelineHealthBadge from '../organisms/production/PipelineHealthBadge.jsx'
 import PublisherSettings from '../organisms/production/PublisherSettings.jsx'
+import StaticDeployPanel from '../organisms/production/StaticDeployPanel.jsx'
 import { PageTitle } from '../atoms/index.js'
 
 import styles from './Production.module.scss'
@@ -56,6 +57,7 @@ export default function Production() {
         doiEntries={[]}
         bioEntries={[]}
       />
+      <StaticDeployPanel corpusId={corpusId} />
       <JobDashboard key={dashboardKey} corpusId={corpusId} />
     </section>
   )

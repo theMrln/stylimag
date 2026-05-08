@@ -6,8 +6,11 @@ import {
   applyPageNumbers as applyPageNumbersMutation,
   cancelPipelineJob as cancelMutation,
   clearCorpusTemplateOverride as clearOverrideMutation,
+  createDeployTarget as createDeployTargetMutation,
+  deleteDeployTarget as deleteDeployTargetMutation,
   getCorpusArtefactSummary,
   getCorpusIssueMetadata,
+  getDeployTargets,
   getPipelineHealth,
   getPipelineJob,
   getPipelineJobs,
@@ -21,9 +24,11 @@ import {
   startBuildFrontPage as startBuildFrontPageMutation,
   startBuildToc as startBuildTocMutation,
   startPageNumberSync as startPageNumberSyncMutation,
+  startStaticDeploy as startStaticDeployMutation,
   syncArticleYaml as syncArticleYamlMutation,
   updateCorpusIssueMetadata as updateCorpusIssueMetadataMutation,
   updateCorpusPipelineSettings as updatePipelineSettingsMutation,
+  updateDeployTarget as updateDeployTargetMutation,
   uploadCorpusTemplateOverride as uploadOverrideMutation,
 } from './Pipeline.graphql'
 
@@ -624,6 +629,143 @@ export function useCorpusPipelineSettings({ corpusId } = {}) {
     saveSettings,
     uploadOverride,
     clearOverride,
+  }
+}
+
+/**
+ * CRUD + start helpers for static-deploy targets. Workspace-scoped when a
+ * workspaceId is supplied; otherwise lists the user's own targets.
+ */
+export function useDeployTargets({ workspaceId } = {}) {
+  const sessionToken = useSelector((state) => state.sessionToken)
+  const [targets, setTargets] = useState([])
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState(null)
+
+  const refresh = useCallback(async () => {
+    setLoading(true)
+    try {
+      const data = await executeQuery({
+        sessionToken,
+        query: getDeployTargets,
+        variables: { workspaceId: workspaceId || null },
+      })
+      setTargets(data?.deployTargets || [])
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setLoading(false)
+    }
+  }, [sessionToken, workspaceId])
+
+  useEffect(() => {
+    refresh()
+  }, [refresh])
+
+  const create = useCallback(
+    async (input) => {
+      setError(null)
+      try {
+        const data = await executeQuery({
+          sessionToken,
+          query: createDeployTargetMutation,
+          variables: { input: { workspaceId, ...input } },
+        })
+        const created = data?.createDeployTarget
+        if (created) setTargets((prev) => [created, ...prev])
+        return created
+      } catch (err) {
+        setError(err.message)
+        return null
+      }
+    },
+    [sessionToken, workspaceId]
+  )
+
+  const update = useCallback(
+    async (id, input) => {
+      setError(null)
+      try {
+        const data = await executeQuery({
+          sessionToken,
+          query: updateDeployTargetMutation,
+          variables: { id, input },
+        })
+        const updated = data?.updateDeployTarget
+        if (updated) {
+          setTargets((prev) =>
+            prev.map((t) => (t._id === id ? updated : t))
+          )
+        }
+        return updated
+      } catch (err) {
+        setError(err.message)
+        return null
+      }
+    },
+    [sessionToken]
+  )
+
+  const remove = useCallback(
+    async (id) => {
+      setError(null)
+      try {
+        await executeQuery({
+          sessionToken,
+          query: deleteDeployTargetMutation,
+          variables: { id },
+        })
+        setTargets((prev) => prev.filter((t) => t._id !== id))
+        return true
+      } catch (err) {
+        setError(err.message)
+        return false
+      }
+    },
+    [sessionToken]
+  )
+
+  return { targets, loading, error, refresh, create, update, remove }
+}
+
+export function useStartStaticDeploy({ corpusId } = {}) {
+  const sessionToken = useSelector((state) => state.sessionToken)
+  const [seedJob, setSeedJob] = useState(null)
+  const [error, setError] = useState(null)
+
+  const stream = usePipelineJobStream({
+    jobId: seedJob?._id,
+    initialJob: seedJob,
+  })
+  const job = stream.job || seedJob
+
+  const start = useCallback(
+    async ({ targetId = null, dryRun = false } = {}) => {
+      if (!corpusId) return null
+      setError(null)
+      try {
+        const data = await executeQuery({
+          sessionToken,
+          query: startStaticDeployMutation,
+          variables: { corpusId, targetId, dryRun },
+        })
+        const created = data?.startStaticDeploy
+        if (created) setSeedJob(created)
+        return created
+      } catch (err) {
+        setError(err.message)
+        return null
+      }
+    },
+    [corpusId, sessionToken]
+  )
+
+  return {
+    start,
+    job,
+    logs: stream.logs,
+    error: error || stream.error,
+    isRunning: Boolean(job) && !isTerminalStatus(job.status),
   }
 }
 

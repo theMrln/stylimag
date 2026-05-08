@@ -124,6 +124,35 @@
     "saving": "saving…",
     "savedAt": "saved at {{when}}"
   },
+  "staticDeploy": {
+    "title": "Static publishing",
+    "subtitle": "Push the corpus’ ready artefacts to a static host. Targets carry encrypted credentials; FTP/GCS/Netlify adapters are stubs in this build (S3 is real).",
+    "target": "Target",
+    "noTargets": "(no targets yet)",
+    "addTarget": "+ new target",
+    "editTarget": "edit",
+    "deleteTarget": "delete",
+    "confirmDelete": "Delete deploy target {{name}}?",
+    "dryRun": "dry-run deploy",
+    "deploy": "deploy",
+    "form": {
+      "name": "Display name",
+      "kind": "Adapter",
+      "config": "Config (JSON)",
+      "credentials": "Credentials (JSON, leave blank to keep existing)",
+      "save": "save target",
+      "saving": "saving…",
+      "cancel": "cancel",
+      "invalidConfig": "config: invalid JSON",
+      "invalidCredentials": "credentials: invalid JSON",
+      "failed": "save failed"
+    },
+    "summary": {
+      "dryRun": "{{n}} item(s) ready (dry run)",
+      "applied": "{{n}} item(s) applied",
+      "details": "show details"
+    }
+  },
   "ojsPush": {
     "title": "Push to OJS",
     "subtitle": "Send page numbers, DOIs, and author bios back to the journal management system. Defaults to dry-run; nothing is sent until you click \"apply\".",

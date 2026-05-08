@@ -8,6 +8,7 @@ const {
   makeNotImplementedRunner,
 } = require('./lib/build-article')
 const { runPageNumbersJob } = require('./lib/page-numbers')
+const { runStaticDeployJob } = require('./lib/run-static-deploy')
 
 const PORT = parseInt(process.env.PORT || '3070', 10)
 const AUTH_TOKEN = process.env.PIPELINE_AUTH_TOKEN || ''
@@ -39,6 +40,7 @@ const JOB_RUNNERS = {
   'article-pdf': runArticlePdfJob,
   batch: runBatchBuildJob,
   'page-numbers': runPageNumbersJob,
+  'static-deploy': runStaticDeployJob,
   'article-cover': makeNotImplementedRunner('article-cover'),
   toc: makeNotImplementedRunner('toc'),
   'front-page': makeNotImplementedRunner('front-page'),

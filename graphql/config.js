@@ -316,6 +316,20 @@ module.exports = convict({
       default: 10_000,
     },
   },
+  credentials: {
+    /**
+     * Base64-encoded 32-byte key for AES-256-GCM symmetric encryption of
+     * stored deploy/OJS credentials. Generate with `openssl rand -base64 32`.
+     * Empty value disables encryption-at-rest (creds stored as plaintext —
+     * fine for local dev, NEVER for production).
+     */
+    encryptionKey: {
+      format: String,
+      sensitive: true,
+      env: 'CREDENTIAL_ENCRYPTION_KEY',
+      default: '',
+    },
+  },
   collaboration: {
     updateWorkingCopyIntervalMs: {
       format: 'int',

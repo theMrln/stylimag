@@ -268,3 +268,46 @@ mutation clearCorpusTemplateOverride(
     }
   }
 }
+
+fragment basicDeployTargetFields on DeployTarget {
+  _id
+  name
+  kind
+  workspace
+  config
+  hasCredentials
+  createdAt
+  updatedAt
+}
+
+query getDeployTargets($workspaceId: ID) {
+  deployTargets(workspaceId: $workspaceId) {
+    ...basicDeployTargetFields
+  }
+}
+
+mutation createDeployTarget($input: CreateDeployTargetInput!) {
+  createDeployTarget(input: $input) {
+    ...basicDeployTargetFields
+  }
+}
+
+mutation updateDeployTarget($id: ID!, $input: UpdateDeployTargetInput!) {
+  updateDeployTarget(id: $id, input: $input) {
+    ...basicDeployTargetFields
+  }
+}
+
+mutation deleteDeployTarget($id: ID!) {
+  deleteDeployTarget(id: $id)
+}
+
+mutation startStaticDeploy(
+  $corpusId: ID!
+  $targetId: ID
+  $dryRun: Boolean = false
+) {
+  startStaticDeploy(corpusId: $corpusId, targetId: $targetId, dryRun: $dryRun) {
+    ...basicPipelineJobFields
+  }
+}

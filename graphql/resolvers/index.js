@@ -32,6 +32,11 @@ const {
   PipelineJob,
   ExportArtifact,
 } = require('./pipelineResolver')
+const {
+  Query: DeployTargetQuery,
+  Mutation: DeployTargetMutation,
+  DeployTarget,
+} = require('./deployTargetResolver')
 const { Mutation: AuthMutation } = require('./authResolver')
 const { InstanceUsageStats, Query: StatsQuery } = require('./statsResolver')
 const {
@@ -62,6 +67,7 @@ module.exports = {
   Corpus,
   PipelineJob,
   ExportArtifact,
+  DeployTarget,
   // Root queries & mutations
   Query: {
     ...UserQuery,
@@ -73,6 +79,7 @@ module.exports = {
     ...CorpusQuery,
     ...OjsQuery,
     ...PipelineQuery,
+    ...DeployTargetQuery,
   },
   Mutation: {
     ...UserMutation,
@@ -84,5 +91,6 @@ module.exports = {
     ...CorpusMutation,
     ...OjsMutation,
     ...PipelineMutation,
+    ...DeployTargetMutation,
   },
 }

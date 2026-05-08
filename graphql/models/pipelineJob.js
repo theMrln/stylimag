@@ -25,6 +25,8 @@ const pipelineJobSchema = new Schema(
       ],
       index: true,
     },
+    /** Set when the user opted to dry-run rather than apply the deploy. */
+    dryRun: { type: Boolean, default: false },
     status: {
       type: String,
       required: true,

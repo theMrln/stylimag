@@ -616,6 +616,38 @@ enum CorpusTemplateOverrideKind {
   css
 }
 
+enum DeployTargetKind {
+  s3
+  ftp
+  gcs
+  netlify
+}
+
+type DeployTarget {
+  _id: ID!
+  name: String!
+  kind: DeployTargetKind!
+  workspace: String
+  config: JSON
+  hasCredentials: Boolean!
+  createdAt: DateTime
+  updatedAt: DateTime
+}
+
+input CreateDeployTargetInput {
+  name: String!
+  kind: DeployTargetKind!
+  workspaceId: ID
+  config: JSON
+  credentials: JSON
+}
+
+input UpdateDeployTargetInput {
+  name: String
+  config: JSON
+  credentials: JSON
+}
+
 type CorpusTemplateOverrideUploadResult {
   corpusId: ID!
   kind: CorpusTemplateOverrideKind!
@@ -695,6 +727,12 @@ type Query {
 
   "List pipeline jobs, optionally filtered by corpus"
   pipelineJobs(corpusId: ID, limit: Int): [PipelineJob!]!
+
+  "List static-deploy targets accessible to the user"
+  deployTargets(workspaceId: ID): [DeployTarget!]!
+
+  "Single deploy target"
+  deployTarget(id: ID!): DeployTarget
 }
 
 type Mutation {
@@ -976,6 +1014,25 @@ type Mutation {
 
   """Cancel a running or queued pipeline job."""
   cancelPipelineJob(id: ID!): PipelineJob
+
+  """Create a new static-deploy target with optional credentials."""
+  createDeployTarget(input: CreateDeployTargetInput!): DeployTarget
+
+  """Update a deploy target. Pass credentials to rotate the secret."""
+  updateDeployTarget(id: ID!, input: UpdateDeployTargetInput!): DeployTarget
+
+  """Delete a deploy target (does not affect previously-deployed artefacts)."""
+  deleteDeployTarget(id: ID!): Boolean
+
+  """
+  Push every "ready" ExportArtifact for the corpus to the configured deploy
+  target. Defaults to dry-run when dryRun: true.
+  """
+  startStaticDeploy(
+    corpusId: ID!
+    targetId: ID
+    dryRun: Boolean = false
+  ): PipelineJob
 }`
 
 module.exports = makeExecutableSchema({ typeDefs, resolvers })
