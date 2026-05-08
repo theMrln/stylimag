@@ -56,10 +56,10 @@ export default function BuildArticleButton({ articleId, corpusId, engine }) {
           {t('buildArticle.cancel', 'cancel')}
         </Button>
       )}
-      {pdfArtefact?.presignedUrl && (
+      {(pdfArtefact?.downloadUrl || pdfArtefact?.presignedUrl) && (
         <a
           className={styles.download}
-          href={pdfArtefact.presignedUrl}
+          href={pdfArtefact.downloadUrl || pdfArtefact.presignedUrl}
           target="_blank"
           rel="noopener noreferrer"
         >

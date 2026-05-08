@@ -26,23 +26,26 @@ function ArtefactList({ artefacts }) {
   if (!artefacts || artefacts.length === 0) return null
   return (
     <ul className={styles.artefacts}>
-      {artefacts.map((a) => (
-        <li key={a._id}>
-          <span className={styles.artefactKind}>{a.kind || a.format}</span>
-          {a.presignedUrl ? (
-            <a
-              href={a.presignedUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={styles.artefactLink}
-            >
-              download
-            </a>
-          ) : (
-            <span className={styles.artefactPending}>(no link)</span>
-          )}
-        </li>
-      ))}
+      {artefacts.map((a) => {
+        const href = a.downloadUrl || a.presignedUrl
+        return (
+          <li key={a._id}>
+            <span className={styles.artefactKind}>{a.kind || a.format}</span>
+            {href ? (
+              <a
+                href={href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={styles.artefactLink}
+              >
+                download
+              </a>
+            ) : (
+              <span className={styles.artefactPending}>(no link)</span>
+            )}
+          </li>
+        )
+      })}
     </ul>
   )
 }

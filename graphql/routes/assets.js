@@ -103,6 +103,47 @@ async function canAccessArticle(user, articleId) {
   )
 }
 
+/**
+ * Permission check for corpus-scoped artefacts (TOC, front-page,
+ * complete-issue, cover-thumbnail). Allows the corpus creator and any
+ * member of the corpus's workspace.
+ */
+async function canAccessCorpus(user, corpusId) {
+  if (!user || !corpusId) return false
+  const Corpus = require('../models/corpus.js')
+  const Workspace = require('../models/workspace.js')
+  const corpus = await Corpus.findById(corpusId)
+    .select({ creator: 1, workspace: 1 })
+    .lean()
+  if (!corpus) return false
+  const userId = user._id?.toString() || user.id?.toString()
+  if (corpus.creator?.toString() === userId) return true
+  if (!corpus.workspace) return false
+  const ws = await Workspace.findOne({
+    _id: corpus.workspace,
+    'members.user': user._id ?? user.id,
+  })
+    .select({ _id: 1 })
+    .lean()
+  return Boolean(ws)
+}
+
+/**
+ * Cover the artefact-shape variability the publishing pipeline introduced
+ * — some kinds carry an article ref, others only a corpus ref. Falls back
+ * to false if neither is set.
+ */
+async function canAccessExportArtifact(user, artifact) {
+  if (!user || !artifact) return false
+  if (artifact.article && (await canAccessArticle(user, artifact.article))) {
+    return true
+  }
+  if (artifact.corpus && (await canAccessCorpus(user, artifact.corpus))) {
+    return true
+  }
+  return false
+}
+
 function serializeExport(artifact) {
   return {
     id: artifact._id.toString(),
@@ -660,7 +701,7 @@ function createAssetsRouter() {
         if (!artifact || artifact.status !== 'ready' || !artifact.storageKey) {
           return res.status(404).json({ error: 'Export not found' })
         }
-        if (!(await canAccessArticle(req.user, artifact.article))) {
+        if (!(await canAccessExportArtifact(req.user, artifact))) {
           return res.status(403).json({ error: 'Forbidden' })
         }
         const obj = await storage.getObject(artifact.storageKey)

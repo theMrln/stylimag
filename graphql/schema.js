@@ -522,6 +522,12 @@ type ExportArtifact {
   storageKey: String
   mimeType: String
   size: Int
+  """
+  Same-origin URL served through the graphql /assets/exports/:id route.
+  Streams from object storage with auth + permission enforced server-side.
+  Prefer this over presignedUrl for browser-side downloads.
+  """
+  downloadUrl: String
   presignedUrl: String
   article: Article
   corpus: Corpus

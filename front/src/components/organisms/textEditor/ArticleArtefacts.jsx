@@ -99,20 +99,23 @@ export default function ArticleArtefacts() {
                     : ''}
                 </span>
               </div>
-              {a.presignedUrl ? (
-                <a
-                  className={styles.download}
-                  href={a.presignedUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  {t('articleFiles.download', 'download')}
-                </a>
-              ) : (
-                <span className={styles.unavailable}>
-                  {t('articleFiles.unavailable', 'no link')}
-                </span>
-              )}
+              {(() => {
+                const href = a.downloadUrl || a.presignedUrl
+                return href ? (
+                  <a
+                    className={styles.download}
+                    href={href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    {t('articleFiles.download', 'download')}
+                  </a>
+                ) : (
+                  <span className={styles.unavailable}>
+                    {t('articleFiles.unavailable', 'no link')}
+                  </span>
+                )
+              })()}
             </li>
           ))}
         </ul>

@@ -6,6 +6,7 @@ fragment basicArtefactFields on ExportArtifact {
   storageKey
   mimeType
   size
+  downloadUrl
   presignedUrl
   createdAt
 }

@@ -1119,6 +1119,16 @@ module.exports = {
   },
 
   ExportArtifact: {
+    /**
+     * Same-origin URL routed through /assets/exports/:id. The browser
+     * never sees the storage backend's hostname; auth + permission are
+     * enforced server-side. Prefer this over `presignedUrl` for any
+     * link that needs to work from a user's browser.
+     */
+    downloadUrl(artefact) {
+      if (!artefact?._id) return null
+      return `/assets/exports/${artefact._id.toString()}`
+    },
     async presignedUrl(artefact) {
       if (!artefact?.storageKey) return null
       const { getPresignedGetUrl } = require('../helpers/storage.js')
