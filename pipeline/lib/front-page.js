@@ -12,6 +12,7 @@ const { buildIssueContext } = require('./article-covers')
 const execFileP = promisify(execFile)
 const APP_DIR = path.resolve(__dirname, '..')
 const TEMPLATE = path.join(APP_DIR, 'templates', 'front_page_template.html5')
+const POPPLER_DPI = 150
 
 /* -------------------------- helpers -------------------------- */
 
@@ -40,8 +41,8 @@ function resolveCoverImageUrl(issue) {
 
 /* -------------------------- runner -------------------------- */
 
-function frontPageKey({ corpusId, jobId, ext }) {
-  return `pipeline-artifacts/${corpusId}/${jobId}/front-page.${ext}`
+function artefactKey({ corpusId, jobId, name, ext }) {
+  return `pipeline-artifacts/${corpusId}/${jobId}/${name}.${ext}`
 }
 
 async function uploadAndRecord({
@@ -50,10 +51,12 @@ async function uploadAndRecord({
   diskPath,
   contentType,
   ext,
+  name,
+  kind,
   jobs,
 }) {
   const buf = await fs.readFile(diskPath)
-  const key = frontPageKey({ corpusId, jobId: job.id, ext })
+  const key = artefactKey({ corpusId, jobId: job.id, name, ext })
   await putObject({ key, body: buf, contentType })
   let url = null
   try {
@@ -62,7 +65,7 @@ async function uploadAndRecord({
     /* presign best-effort */
   }
   jobs.addArtefact(job.id, {
-    kind: 'front-page',
+    kind,
     storageKey: key,
     contentType,
     size: buf.length,
@@ -70,6 +73,33 @@ async function uploadAndRecord({
     expiresIn: 24 * 3600,
   })
   return key
+}
+
+/**
+ * Best-effort PDF → PNG rasterisation of page 1 via Poppler's `pdftoppm`.
+ * Bundled into the pipeline image (poppler-utils). Returns the disk path
+ * on success or `null` on failure — failures are logged but never fatal,
+ * so a missing/broken Poppler doesn't take down the whole front-page job.
+ */
+async function rasterisePdfPage1({ pdfPath, workDir, log }) {
+  const prefix = path.join(workDir, 'cover-thumbnail')
+  const pngPath = `${prefix}.png`
+  try {
+    const { stderr } = await execFileP(
+      'pdftoppm',
+      ['-png', '-singlefile', '-r', String(POPPLER_DPI), pdfPath, prefix],
+      { timeout: 60_000 }
+    )
+    if (stderr?.trim()) log?.(`pdftoppm: ${stderr.trim()}`)
+    await fs.access(pngPath)
+    return pngPath
+  } catch (err) {
+    log?.(
+      `pdftoppm not available or failed (${err.message}). Skipping cover-thumbnail.`
+    )
+    await fs.rm(pngPath, { force: true })
+    return null
+  }
 }
 
 /**
@@ -149,9 +179,29 @@ async function runFrontPageJob({ job, jobs }) {
       diskPath: pdfPath,
       contentType: 'application/pdf',
       ext: 'pdf',
+      name: 'front-page',
+      kind: 'front-page',
       jobs,
     })
     log('front-page PDF uploaded')
+
+    jobs.throwIfCancelled(job.id)
+    jobs.setProgress(job.id, 0.85)
+    const pngPath = await rasterisePdfPage1({ pdfPath, workDir: work, log })
+    if (pngPath) {
+      await uploadAndRecord({
+        job,
+        corpusId,
+        diskPath: pngPath,
+        contentType: 'image/png',
+        ext: 'png',
+        name: 'cover-thumbnail',
+        kind: 'cover-thumbnail',
+        jobs,
+      })
+      log('cover-thumbnail PNG uploaded')
+    }
+
     jobs.setProgress(job.id, 1)
     jobs.setStatus(job.id, 'succeeded')
   } finally {

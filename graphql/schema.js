@@ -728,6 +728,12 @@ type Query {
   "List pipeline jobs, optionally filtered by corpus"
   pipelineJobs(corpusId: ID, limit: Int): [PipelineJob!]!
 
+  """
+  Latest ready artefact per kind for a single article (PDF, HTML, cover, …).
+  Drives the article-page Files panel.
+  """
+  articleArtefacts(articleId: ID!): [ExportArtifact!]!
+
   "List static-deploy targets accessible to the user"
   deployTargets(workspaceId: ID): [DeployTarget!]!
 

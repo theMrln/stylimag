@@ -8,6 +8,7 @@ import {
   clearCorpusTemplateOverride as clearOverrideMutation,
   createDeployTarget as createDeployTargetMutation,
   deleteDeployTarget as deleteDeployTargetMutation,
+  getArticleArtefacts,
   getCorpusArtefactSummary,
   getCorpusIssueMetadata,
   getDeployTargets,
@@ -337,6 +338,42 @@ export function useCorpusArtefactSummary({ corpusId } = {}) {
   }, [refresh])
 
   return { summary, loading, refresh }
+}
+
+/**
+ * Latest ready ExportArtifact rows for an article, deduped by kind. Used
+ * by the article-page Files panel so editors get one-click access to the
+ * most recent PDF / HTML / cover the pipeline produced.
+ */
+export function useArticleArtefacts({ articleId } = {}) {
+  const sessionToken = useSelector((state) => state.sessionToken)
+  const [artefacts, setArtefacts] = useState([])
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState(null)
+
+  const refresh = useCallback(async () => {
+    if (!articleId) return
+    setLoading(true)
+    setError(null)
+    try {
+      const data = await executeQuery({
+        sessionToken,
+        query: getArticleArtefacts,
+        variables: { articleId },
+      })
+      setArtefacts(data?.articleArtefacts || [])
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setLoading(false)
+    }
+  }, [articleId, sessionToken])
+
+  useEffect(() => {
+    refresh()
+  }, [refresh])
+
+  return { artefacts, loading, error, refresh }
 }
 
 /**

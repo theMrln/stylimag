@@ -9,6 +9,7 @@ const KIND_LABELS = [
   ['article-cover', 'cov', 'Article covers'],
   ['toc', 'toc', 'Table of contents'],
   ['front-page', 'fp', 'Front page'],
+  ['cover-thumbnail', 'thm', 'Cover thumbnail (PNG)'],
   ['complete-issue', 'iss', 'Complete-issue PDF'],
 ]
 

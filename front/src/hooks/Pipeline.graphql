@@ -51,6 +51,12 @@ query getPipelineJobs($corpusId: ID, $limit: Int) {
   }
 }
 
+query getArticleArtefacts($articleId: ID!) {
+  articleArtefacts(articleId: $articleId) {
+    ...basicArtefactFields
+  }
+}
+
 query getCorpusArtefactSummary($corpusId: ID, $limit: Int = 50) {
   pipelineJobs(corpusId: $corpusId, limit: $limit) {
     _id

@@ -50,6 +50,7 @@ const exportArtifactSchema = new Schema(
         'toc',
         'front-page',
         'complete-issue',
+        'cover-thumbnail',
       ],
       index: true,
     },

@@ -6,6 +6,7 @@ import ArticleBibliography from '../bibliography/ArticleBibliography.jsx'
 import Export from '../export/Export.jsx'
 import ArticleMetadata from '../metadata/ArticleMetadata.jsx'
 import ArticleData from '../nakala/ArticleData.jsx'
+import ArticleArtefacts from './ArticleArtefacts.jsx'
 import ArticleFootnotes from './ArticleFootnotes.jsx'
 import ArticleTableOfContents from './ArticleTableOfContents.jsx'
 import CollaborativeVersions from './CollaborativeVersions.jsx'
@@ -34,6 +35,7 @@ export default function EditorMenuContent({
         <ArticleBibliography articleId={articleId} />
       )}
       {activeMenu === 'footnotes' && <ArticleFootnotes />}
+      {activeMenu === 'files' && <ArticleArtefacts />}
       {activeMenu === 'data' && <ArticleData articleId={articleId} />}
       {activeMenu === 'export' && (
         <>

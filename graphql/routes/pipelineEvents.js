@@ -77,9 +77,15 @@ async function persistArtefacts(job, snap) {
     const format =
       a.kind === 'article-html'
         ? 'html'
-        : a.kind && a.kind.endsWith('-pdf')
-          ? 'pdf'
-          : 'pdf'
+        : a.kind === 'cover-thumbnail'
+          ? 'other' // image/png — `format` enum has no 'png', mimeType carries it
+          : a.kind === 'article-pdf' ||
+              a.kind === 'article-cover' ||
+              a.kind === 'toc' ||
+              a.kind === 'front-page' ||
+              a.kind === 'complete-issue'
+            ? 'pdf'
+            : 'other'
     const created = await ExportArtifact.create({
       article: job.article || undefined,
       corpus: job.corpus || undefined,

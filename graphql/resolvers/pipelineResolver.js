@@ -87,7 +87,9 @@ async function persistArtefacts(job, remoteJob) {
         ? 'pdf'
         : a.kind === 'article-html'
           ? 'html'
-          : 'other'
+          : a.kind === 'cover-thumbnail'
+            ? 'other' // image/png — `format` enum doesn't have 'png', use mimeType
+            : 'other'
     const doc = await ExportArtifact.create({
       article: job.article || undefined,
       corpus: job.corpus || undefined,
@@ -485,6 +487,30 @@ module.exports = {
     async pipelineJob(_, { id }, context) {
       if (!context.user) throw new NotAuthenticatedError()
       return loadAndRefreshJob(id)
+    },
+
+    /**
+     * Latest "ready" ExportArtifact rows for an article, deduped by kind.
+     * Drives the article-page Files panel — gives editors one-click access
+     * to the most recent PDF/HTML/cover the pipeline produced.
+     */
+    async articleArtefacts(_, { articleId }, context) {
+      if (!context.user) throw new NotAuthenticatedError()
+      // Permission-check via the article so workspace-level access is
+      // enforced consistently with the rest of the editor surface.
+      await getArticleByContext(articleId, context)
+
+      const rows = await ExportArtifact.find({
+        article: articleId,
+        status: 'ready',
+      })
+        .sort({ createdAt: -1 })
+        .lean()
+      const byKind = new Map()
+      for (const row of rows) {
+        if (!byKind.has(row.kind)) byKind.set(row.kind, row)
+      }
+      return Array.from(byKind.values())
     },
 
     async pipelineJobs(_, { corpusId, limit = 20 }, context) {

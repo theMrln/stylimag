@@ -8,6 +8,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     chromium \
     fonts-liberation \
     fonts-noto-color-emoji \
+    poppler-utils \
     wget \
     ca-certificates \
     && rm -rf /var/lib/apt/lists/*

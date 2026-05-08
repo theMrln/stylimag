@@ -1,6 +1,7 @@
 import {
   BookKey,
   Database,
+  FileDown,
   History,
   Maximize2,
   MessageSquareShare,
@@ -94,6 +95,13 @@ export default function EditorMenu({ onChange }) {
           minimized={minimized}
           icon={<Printer />}
           text={t('export.title')}
+        />
+        <EditorMenuItem
+          onClick={toggleActiveMenu('files')}
+          selected={activeMenu === 'files'}
+          minimized={minimized}
+          icon={<FileDown />}
+          text={t('articleFiles.title', 'Files')}
         />
         <EditorMenuItem
           onClick={handleAnnotate}
