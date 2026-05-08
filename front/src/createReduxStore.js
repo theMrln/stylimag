@@ -30,6 +30,12 @@ export const initialState = {
     status: 'synced',
   },
   articleStructure: [],
+  /**
+   * Footnotes extracted from the raw markdown by `updateArticleStructure`.
+   * Each entry: { ref, definitionLine, referenceLines, definition }.
+   * Empty until the editor first dispatches UPDATE_ARTICLE_STRUCTURE.
+   */
+  articleFootnotes: [],
   articleWriters: [],
   articlePreferences: localStorage.getItem('articlePreferences')
     ? JSON.parse(localStorage.getItem('articlePreferences'))
@@ -249,7 +255,70 @@ function updateArticleStructure(state, { md }) {
       return { ...lineWithIndex, title }
     })
 
-  return { ...state, articleStructure }
+  return {
+    ...state,
+    articleStructure,
+    articleFootnotes: extractFootnotes(text),
+  }
+}
+
+/**
+ * Pandoc-style footnote anchors. Captures definitions like
+ *   [^name]: lorem ipsum
+ *   [^name]: continuation indented by 4 spaces
+ * and tallies inline references `[^name]` so editors can see which
+ * footnotes are live, orphaned (referenced but never defined), or unused.
+ */
+function extractFootnotes(text) {
+  if (!text) return []
+  const lines = text.split('\n')
+  const definitions = new Map()
+  // First pass: collect definitions.
+  for (let i = 0; i < lines.length; i++) {
+    const m = /^\[\^([^\]]+)\]:\s*(.*)$/.exec(lines[i])
+    if (m) {
+      const ref = m[1]
+      let definition = m[2] || ''
+      let j = i + 1
+      while (
+        j < lines.length &&
+        (/^\s{2,}\S/.test(lines[j]) || /^$/.test(lines[j]))
+      ) {
+        if (lines[j].trim()) definition += '\n' + lines[j].trim()
+        j += 1
+      }
+      definitions.set(ref, {
+        ref,
+        definitionLine: i,
+        referenceLines: [],
+        definition: definition.trim(),
+      })
+    }
+  }
+  // Second pass: collect inline references (excluding definition lines).
+  const inlineRe = /\[\^([^\]]+)\]/g
+  for (let i = 0; i < lines.length; i++) {
+    if (/^\[\^[^\]]+\]:/.test(lines[i])) continue
+    let match
+    while ((match = inlineRe.exec(lines[i])) !== null) {
+      const ref = match[1]
+      if (!definitions.has(ref)) {
+        definitions.set(ref, {
+          ref,
+          definitionLine: null,
+          referenceLines: [i],
+          definition: '',
+        })
+      } else {
+        definitions.get(ref).referenceLines.push(i)
+      }
+    }
+  }
+  return Array.from(definitions.values()).sort(
+    (a, b) =>
+      (a.definitionLine ?? a.referenceLines[0] ?? 0) -
+      (b.definitionLine ?? b.referenceLines[0] ?? 0)
+  )
 }
 
 function updateArticleWriters(state, { articleWriters }) {

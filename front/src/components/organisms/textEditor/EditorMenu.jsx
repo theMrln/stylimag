@@ -6,6 +6,7 @@ import {
   MessageSquareShare,
   Minimize2,
   Printer,
+  StickyNote,
   TableOfContents,
   TextCursorInput,
 } from 'lucide-react'
@@ -65,6 +66,13 @@ export default function EditorMenu({ onChange }) {
           minimized={minimized}
           icon={<BookKey />}
           text={t('bibliography.title')}
+        />
+        <EditorMenuItem
+          onClick={toggleActiveMenu('footnotes')}
+          selected={activeMenu === 'footnotes'}
+          minimized={minimized}
+          icon={<StickyNote />}
+          text={t('footnotes.title', 'Footnotes')}
         />
         <EditorMenuItem
           onClick={toggleActiveMenu('data')}
