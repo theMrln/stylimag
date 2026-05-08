@@ -217,3 +217,54 @@ mutation updateCorpusIssueMetadata(
     }
   }
 }
+
+mutation updateCorpusPipelineSettings(
+  $corpusId: ID!
+  $input: CorpusPipelineSettingsInput!
+) {
+  corpus(corpusId: $corpusId) {
+    updatePipelineSettings(input: $input) {
+      _id
+      pipelineSettings {
+        templateId
+        cssOverrideRef
+        ojsTargetId
+        staticDeployTargetId
+        princeEnabled
+      }
+    }
+  }
+}
+
+mutation uploadCorpusTemplateOverride(
+  $corpusId: ID!
+  $kind: CorpusTemplateOverrideKind!
+  $filename: String!
+  $contentBase64: String!
+) {
+  uploadCorpusTemplateOverride(
+    corpusId: $corpusId
+    kind: $kind
+    filename: $filename
+    contentBase64: $contentBase64
+  ) {
+    corpusId
+    kind
+    storageKey
+    size
+    presignedUrl
+  }
+}
+
+mutation clearCorpusTemplateOverride(
+  $corpusId: ID!
+  $kind: CorpusTemplateOverrideKind!
+) {
+  clearCorpusTemplateOverride(corpusId: $corpusId, kind: $kind) {
+    _id
+    pipelineSettings {
+      templateId
+      cssOverrideRef
+    }
+  }
+}

@@ -47,7 +47,7 @@ async function uploadAndRecord({
  * we wire the asset map through in Phase 3).
  */
 async function runArticlePdfJob({ job, jobs }) {
-  const { articleId, corpusId, markdown } = job.params
+  const { articleId, corpusId, markdown, pipelineSettings } = job.params
   const engine = job.params.engine === 'prince' ? 'prince' : 'paged'
   const log = (msg) => jobs.appendLog(job.id, msg)
 
@@ -71,6 +71,7 @@ async function runArticlePdfJob({ job, jobs }) {
       htmlPath,
       workDir: work,
       engine,
+      pipelineSettings,
       log,
     })
     jobs.setProgress(job.id, 0.45)
@@ -151,6 +152,7 @@ async function runBatchBuildJob({ job, jobs }) {
       corpusId: job.params.corpusId,
       markdown: item.markdown,
       engine: job.params.engine || 'paged',
+      pipelineSettings: job.params.pipelineSettings || {},
     }
     try {
       await runArticlePdfJob({

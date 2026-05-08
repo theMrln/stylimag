@@ -611,6 +611,19 @@ type OjsPushSummary {
   items: [JSON!]!
 }
 
+enum CorpusTemplateOverrideKind {
+  template
+  css
+}
+
+type CorpusTemplateOverrideUploadResult {
+  corpusId: ID!
+  kind: CorpusTemplateOverrideKind!
+  storageKey: String!
+  size: Int!
+  presignedUrl: String
+}
+
 """
 Lightweight reflection of the pipeline service's /health endpoint, used by the
 PipelineHealthBadge in the production UI.
@@ -939,6 +952,27 @@ type Mutation {
     entries: [OjsPushBioEntry!]!
     apply: Boolean = false
   ): OjsPushSummary
+
+  """
+  Upload a per-corpus template or CSS override into object storage and
+  record its ref on Corpus.pipelineSettings. \`contentBase64\` is a
+  base64-encoded payload; max ~2 MiB.
+  """
+  uploadCorpusTemplateOverride(
+    corpusId: ID!
+    kind: CorpusTemplateOverrideKind!
+    filename: String!
+    contentBase64: String!
+  ): CorpusTemplateOverrideUploadResult
+
+  """
+  Drop the recorded override ref. The MinIO object stays in place; cleanup
+  of orphaned overrides is a deferred concern.
+  """
+  clearCorpusTemplateOverride(
+    corpusId: ID!
+    kind: CorpusTemplateOverrideKind!
+  ): Corpus
 
   """Cancel a running or queued pipeline job."""
   cancelPipelineJob(id: ID!): PipelineJob

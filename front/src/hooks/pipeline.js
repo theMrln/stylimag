@@ -5,6 +5,7 @@ import { executeQuery } from '../helpers/graphQL.js'
 import {
   applyPageNumbers as applyPageNumbersMutation,
   cancelPipelineJob as cancelMutation,
+  clearCorpusTemplateOverride as clearOverrideMutation,
   getCorpusArtefactSummary,
   getCorpusIssueMetadata,
   getPipelineHealth,
@@ -22,6 +23,8 @@ import {
   startPageNumberSync as startPageNumberSyncMutation,
   syncArticleYaml as syncArticleYamlMutation,
   updateCorpusIssueMetadata as updateCorpusIssueMetadataMutation,
+  updateCorpusPipelineSettings as updatePipelineSettingsMutation,
+  uploadCorpusTemplateOverride as uploadOverrideMutation,
 } from './Pipeline.graphql'
 
 const TERMINAL_STATUSES = new Set(['succeeded', 'failed', 'cancelled'])
@@ -516,6 +519,113 @@ export const usePushAuthorBiosToOjs = makeOjsPushHook(
   pushBiosMutation,
   'pushAuthorBiosToOJS'
 )
+
+/**
+ * Read + write per-corpus publishing settings: template/CSS override refs,
+ * Prince toggle, OJS target id. Wraps the dual mutation surface
+ * (settings update vs override upload/clear) into one cohesive API.
+ */
+export function useCorpusPipelineSettings({ corpusId } = {}) {
+  const sessionToken = useSelector((state) => state.sessionToken)
+  const issue = useCorpusIssueMetadata({ corpusId })
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState(null)
+
+  const settings = issue.data?.pipelineSettings || null
+
+  const saveSettings = useCallback(
+    async (input) => {
+      if (!corpusId) return null
+      setBusy(true)
+      setError(null)
+      try {
+        const data = await executeQuery({
+          sessionToken,
+          query: updatePipelineSettingsMutation,
+          variables: { corpusId, input },
+        })
+        await issue.refresh()
+        return data?.corpus?.updatePipelineSettings || null
+      } catch (err) {
+        setError(err.message)
+        return null
+      } finally {
+        setBusy(false)
+      }
+    },
+    [corpusId, issue, sessionToken]
+  )
+
+  const uploadOverride = useCallback(
+    async ({ kind, file }) => {
+      if (!corpusId) return null
+      if (!file) {
+        setError('file is required')
+        return null
+      }
+      setBusy(true)
+      setError(null)
+      try {
+        const buf = await file.arrayBuffer()
+        const bytes = new Uint8Array(buf)
+        let bin = ''
+        for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i])
+        const contentBase64 = btoa(bin)
+        const data = await executeQuery({
+          sessionToken,
+          query: uploadOverrideMutation,
+          variables: {
+            corpusId,
+            kind,
+            filename: file.name,
+            contentBase64,
+          },
+        })
+        await issue.refresh()
+        return data?.uploadCorpusTemplateOverride || null
+      } catch (err) {
+        setError(err.message)
+        return null
+      } finally {
+        setBusy(false)
+      }
+    },
+    [corpusId, issue, sessionToken]
+  )
+
+  const clearOverride = useCallback(
+    async ({ kind }) => {
+      if (!corpusId) return null
+      setBusy(true)
+      setError(null)
+      try {
+        const data = await executeQuery({
+          sessionToken,
+          query: clearOverrideMutation,
+          variables: { corpusId, kind },
+        })
+        await issue.refresh()
+        return data?.corpus?.clearCorpusTemplateOverride || null
+      } catch (err) {
+        setError(err.message)
+        return null
+      } finally {
+        setBusy(false)
+      }
+    },
+    [corpusId, issue, sessionToken]
+  )
+
+  return {
+    settings,
+    busy,
+    error,
+    refresh: issue.refresh,
+    saveSettings,
+    uploadOverride,
+    clearOverride,
+  }
+}
 
 /**
  * Rebuild + persist an article's YAML frontmatter. Returns the rewritten

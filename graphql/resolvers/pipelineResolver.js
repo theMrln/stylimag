@@ -7,12 +7,29 @@ const { getArticleByContext } = require('./articleResolver.js')
 const pipelineClient = require('../helpers/pipelineClient.js')
 const { toLegacyFormat } = require('../helpers/metadata.js')
 const { rebuildArticleYaml } = require('../helpers/articleYamlSync.js')
+const { putObject, getPresignedGetUrl } = require('../helpers/storage.js')
 const {
   NotAuthenticatedError,
   NotFoundError,
   BadRequestError,
 } = require('../helpers/errors.js')
 const { logger } = require('../logger.js')
+
+const TEMPLATE_OVERRIDE_KINDS = ['template', 'css']
+const TEMPLATE_OVERRIDE_MIME = {
+  template: 'text/html; charset=utf-8',
+  css: 'text/css; charset=utf-8',
+}
+const TEMPLATE_OVERRIDE_MAX_BYTES = 2 * 1024 * 1024 // 2 MiB
+
+function templateOverrideKey(corpusId, kind, filename) {
+  const safe = filename.replace(/[^A-Za-z0-9._-]/g, '_')
+  return `pipeline-templates/${corpusId}/${kind}/${safe}`
+}
+
+function corpusOverrideField(kind) {
+  return kind === 'template' ? 'templateId' : 'cssOverrideRef'
+}
 
 function buildArticleMarkdown(article) {
   const metadata = article.workingVersion?.metadata ?? {}
@@ -253,6 +270,7 @@ module.exports = {
             corpusId: corpus._id.toString(),
             markdown,
             engine,
+            pipelineSettings: corpus.pipelineSettings || {},
           },
         })
         job.remoteJobId = remote.id
@@ -325,6 +343,7 @@ module.exports = {
             engine,
             corpusId: corpus._id.toString(),
             articles: items,
+            pipelineSettings: corpus.pipelineSettings || {},
           },
         })
         job.remoteJobId = remote.id
@@ -511,6 +530,94 @@ module.exports = {
       article.workingVersion.metadata = metadata
       await article.save()
       return { articleId, corpusId: corpusId || null, yaml, markdown }
+    },
+
+    /**
+     * Upload a per-corpus template or CSS override. The base64-encoded
+     * content lands in MinIO under pipeline-templates/<corpusId>/<kind>/...;
+     * its storage key is recorded on `corpus.pipelineSettings` so the
+     * pipeline runner can resolve it at job time. Idempotent on the
+     * (corpus, kind, filename) tuple — re-uploading replaces the object.
+     */
+    async uploadCorpusTemplateOverride(
+      _,
+      { corpusId, kind, filename, contentBase64 },
+      context
+    ) {
+      if (!context.user) throw new NotAuthenticatedError()
+      if (!TEMPLATE_OVERRIDE_KINDS.includes(kind)) {
+        throw new BadRequestError(
+          `kind must be one of ${TEMPLATE_OVERRIDE_KINDS.join(', ')}`
+        )
+      }
+      if (!filename || /\//.test(filename)) {
+        throw new BadRequestError('filename must be a bare basename')
+      }
+      const corpus = await Corpus.findById(corpusId)
+      if (!corpus) throw new NotFoundError('Corpus', corpusId)
+
+      const buffer = Buffer.from(contentBase64 || '', 'base64')
+      if (buffer.length === 0) {
+        throw new BadRequestError('contentBase64 decoded to empty payload')
+      }
+      if (buffer.length > TEMPLATE_OVERRIDE_MAX_BYTES) {
+        throw new BadRequestError(
+          `override too large (max ${TEMPLATE_OVERRIDE_MAX_BYTES} bytes)`
+        )
+      }
+      const key = templateOverrideKey(corpus._id.toString(), kind, filename)
+      await putObject({
+        key,
+        body: buffer,
+        contentType: TEMPLATE_OVERRIDE_MIME[kind],
+      })
+
+      const next = {
+        ...(corpus.pipelineSettings?.toObject?.() ??
+          corpus.pipelineSettings ??
+          {}),
+      }
+      next[corpusOverrideField(kind)] = key
+      corpus.pipelineSettings = next
+      await corpus.save()
+
+      let presignedUrl = null
+      try {
+        presignedUrl = await getPresignedGetUrl(key, 600)
+      } catch {
+        /* presign is best-effort */
+      }
+      return {
+        corpusId: corpus._id.toString(),
+        kind,
+        storageKey: key,
+        size: buffer.length,
+        presignedUrl,
+      }
+    },
+
+    /**
+     * Drop the recorded override ref. The MinIO object is left in place
+     * (cleanup of orphaned overrides is a deferred concern).
+     */
+    async clearCorpusTemplateOverride(_, { corpusId, kind }, context) {
+      if (!context.user) throw new NotAuthenticatedError()
+      if (!TEMPLATE_OVERRIDE_KINDS.includes(kind)) {
+        throw new BadRequestError(
+          `kind must be one of ${TEMPLATE_OVERRIDE_KINDS.join(', ')}`
+        )
+      }
+      const corpus = await Corpus.findById(corpusId)
+      if (!corpus) throw new NotFoundError('Corpus', corpusId)
+      const next = {
+        ...(corpus.pipelineSettings?.toObject?.() ??
+          corpus.pipelineSettings ??
+          {}),
+      }
+      next[corpusOverrideField(kind)] = ''
+      corpus.pipelineSettings = next
+      await corpus.save()
+      return corpus
     },
 
     async cancelPipelineJob(_, { id }, context) {

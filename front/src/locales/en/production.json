@@ -103,6 +103,27 @@
       "status": "status"
     }
   },
+  "publisher": {
+    "title": "Publisher settings",
+    "subtitle": "Per-corpus configuration that drives the publishing pipeline.",
+    "overrides": "Template and CSS overrides",
+    "overridesHelp": "Drop a custom Pandoc HTML5 template or print CSS to override the bundled defaults for this corpus only.",
+    "templateLabel": "Pandoc HTML5 template",
+    "cssLabel": "Print CSS override",
+    "refSet": "set: {{ref}}",
+    "refUnset": "using bundled default",
+    "upload": "upload",
+    "uploading": "uploading…",
+    "clear": "clear override",
+    "targets": "Targets",
+    "ojsTarget": "OJS target id",
+    "staticDeployTarget": "Static-deploy target id",
+    "unset": "(unset)",
+    "princeEnabled": "Allow PrinceXML engine for this corpus (requires container rebuild)",
+    "save": "save settings",
+    "saving": "saving…",
+    "savedAt": "saved at {{when}}"
+  },
   "ojsPush": {
     "title": "Push to OJS",
     "subtitle": "Send page numbers, DOIs, and author bios back to the journal management system. Defaults to dry-run; nothing is sent until you click \"apply\".",
