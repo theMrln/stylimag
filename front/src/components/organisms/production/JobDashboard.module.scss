@@ -1,0 +1,148 @@
+.dashboard {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.title {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.errorBanner {
+  background: #fdecea;
+  color: #b3261e;
+  padding: 0.6rem 0.8rem;
+  border-radius: 0.25rem;
+}
+
+.empty {
+  color: #6b7280;
+  font-style: italic;
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.row {
+  border: 1px solid #e1e1e1;
+  border-radius: 0.25rem;
+  padding: 0.75rem 1rem;
+  background: #fff;
+
+  &[data-status='succeeded'] {
+    border-left: 4px solid #277a3a;
+  }
+  &[data-status='failed'] {
+    border-left: 4px solid #b3261e;
+  }
+  &[data-status='cancelled'] {
+    border-left: 4px solid #8a6d3b;
+  }
+  &[data-status='running'],
+  &[data-status='queued'] {
+    border-left: 4px solid #1c5f8e;
+  }
+}
+
+.rowHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.type {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.status {
+  font-size: 0.85rem;
+  text-transform: lowercase;
+}
+
+.progress {
+  font-size: 0.85rem;
+  color: #1c5f8e;
+}
+
+.timestamp {
+  margin-left: auto;
+  font-size: 0.8rem;
+  color: #6b7280;
+}
+
+.error {
+  color: #b3261e;
+  font-size: 0.85rem;
+  margin: 0.4rem 0 0;
+}
+
+.artefacts {
+  list-style: none;
+  margin: 0.5rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+
+  li {
+    display: inline-flex;
+    gap: 0.4rem;
+    align-items: center;
+    font-size: 0.85rem;
+  }
+}
+
+.artefactKind {
+  background: #eef2f7;
+  padding: 0.1rem 0.4rem;
+  border-radius: 0.2rem;
+  font-family: monospace;
+  font-size: 0.75rem;
+}
+
+.artefactLink {
+  text-decoration: underline;
+}
+
+.artefactPending {
+  color: #6b7280;
+  font-style: italic;
+}
+
+.logs {
+  margin-top: 0.5rem;
+  font-size: 0.8rem;
+
+  summary {
+    cursor: pointer;
+    color: #6b7280;
+  }
+
+  pre {
+    background: #1f2937;
+    color: #e5e7eb;
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.25rem;
+    max-height: 16rem;
+    overflow: auto;
+    font-size: 0.75rem;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+}

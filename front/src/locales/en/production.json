@@ -10,5 +10,20 @@
     "ready": "pipeline ready",
     "degraded": "pipeline degraded",
     "refresh": "refresh health"
+  },
+  "page": {
+    "title": "Production",
+    "heading": "Production pipeline",
+    "intro": "Build per-article PDFs and follow the publishing pipeline. Issue-level artefacts (covers, TOC, complete-issue) and OJS push-back land in later phases.",
+    "crumbs": {
+      "allCorpora": "all corpora"
+    }
+  },
+  "jobDashboard": {
+    "title": "Recent pipeline jobs",
+    "refresh": "refresh",
+    "cancel": "cancel",
+    "logs": "logs",
+    "empty": "No pipeline jobs yet for this corpus."
   }
 }

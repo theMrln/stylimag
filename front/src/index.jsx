@@ -76,6 +76,7 @@ const Credentials = lazy(
 )
 const Annotate = lazy(() => import('./components/pages/Annotate.jsx'))
 const Privacy = lazy(() => import('./components/pages/Privacy.jsx'))
+const Production = lazy(() => import('./components/pages/Production.jsx'))
 const Story = lazy(() => import('./stories/Story.jsx'))
 
 const store = createStore()
@@ -167,6 +168,7 @@ const router = createBrowserRouter(
         {/* Corpus */}
         <Route path="corpus" element={<RequireAuth />}>
           <Route index element={<Corpus />} />
+          <Route path=":corpusId/production" element={<Production />} />
         </Route>
 
         {/* Workspaces */}

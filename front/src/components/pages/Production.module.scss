@@ -1,0 +1,35 @@
+.section {
+  max-width: 64rem;
+  margin: 0 auto;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.intro {
+  color: #4b5563;
+  font-size: 0.95rem;
+  margin: 0;
+}
+
+.crumbs {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  color: #6b7280;
+
+  a {
+    color: inherit;
+    text-decoration: underline;
+  }
+}

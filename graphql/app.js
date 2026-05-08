@@ -257,6 +257,21 @@ const { createAssetsRouter } = require('./routes/assets.js')
 app.use('/assets', populateUserFromJWT({ jwtSecret }), createAssetsRouter())
 
 /*
+ * Pipeline-job SSE proxy. Browsers open EventSource against
+ * /pipeline-events/:localJobId; we permission-check, open an upstream stream
+ * to the pipeline service, and tee selected events into Mongo so a
+ * disconnected/reloaded browser can resume from the latest known state.
+ */
+const {
+  createPipelineEventsRouter,
+} = require('./routes/pipelineEvents.js')
+app.use(
+  '/pipeline-events',
+  populateUserFromJWT({ jwtSecret }),
+  createPipelineEventsRouter()
+)
+
+/*
  * GraphQL interface
  */
 

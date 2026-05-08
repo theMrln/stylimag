@@ -42,6 +42,27 @@ function getJob(id) {
   return jobs.get(id)
 }
 
+/**
+ * Cooperative cancellation flag. Runners check this between phases to abort
+ * cleanly without killing mid-process subprocesses (which can leave temp
+ * files or partial uploads behind).
+ */
+function isCancelled(id) {
+  return jobs.get(id)?.status === 'cancelled'
+}
+
+class CancelledError extends Error {
+  constructor(jobId) {
+    super(`Job ${jobId} was cancelled`)
+    this.name = 'CancelledError'
+    this.cancelled = true
+  }
+}
+
+function throwIfCancelled(id) {
+  if (isCancelled(id)) throw new CancelledError(id)
+}
+
 function listJobs() {
   return Array.from(jobs.values())
 }
@@ -132,4 +153,7 @@ module.exports = {
   fail,
   subscribe,
   summarise,
+  isCancelled,
+  throwIfCancelled,
+  CancelledError,
 }

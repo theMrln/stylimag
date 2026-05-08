@@ -20,6 +20,10 @@
       "label": "Annotate",
       "title": "Annotate the corpus"
     },
+    "production": {
+      "button": "production",
+      "title": "Open production pipeline"
+    },
     "copyId": {
       "label": "Copy identifier",
       "success": "Identifier copied to clipboard.",

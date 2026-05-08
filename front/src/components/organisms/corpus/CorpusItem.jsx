@@ -1,5 +1,5 @@
 import clsx from 'clsx'
-import { MessageSquareShare, Printer, Settings, Trash } from 'lucide-react'
+import { Hammer, MessageSquareShare, Printer, Settings, Trash } from 'lucide-react'
 import { useCallback, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router'
@@ -99,6 +99,14 @@ export default function CorpusItem({ corpus }) {
         </div>
 
         <div role="menu" className={styles.actionButtons}>
+          <Link
+            role="menuitem"
+            className={buttonStyles.icon}
+            to={`/corpus/${corpus._id}/production`}
+            title={t('actions.production.title', 'Open production pipeline')}
+          >
+            <Hammer aria-label={t('actions.production.button', 'production')} />
+          </Link>
           <Link
             role="menuitem"
             target="_blank"

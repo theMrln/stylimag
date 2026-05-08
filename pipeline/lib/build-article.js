@@ -56,6 +56,7 @@ async function runArticlePdfJob({ job, jobs }) {
 
   const work = await fs.mkdtemp(path.join(os.tmpdir(), `article-${articleId}-`))
   try {
+    jobs.throwIfCancelled(job.id)
     const mdPath = path.join(work, `article-${articleId}.md`)
     const htmlPath = path.join(work, `article-${articleId}.html`)
     const pdfPath = path.join(work, `article-${articleId}.pdf`)
@@ -64,6 +65,7 @@ async function runArticlePdfJob({ job, jobs }) {
     log(`Wrote markdown to scratch dir (${work})`)
     jobs.setProgress(job.id, 0.15)
 
+    jobs.throwIfCancelled(job.id)
     await mdToHtml({
       mdPath,
       htmlPath,
@@ -72,6 +74,8 @@ async function runArticlePdfJob({ job, jobs }) {
       log,
     })
     jobs.setProgress(job.id, 0.45)
+    jobs.throwIfCancelled(job.id)
+
     await uploadAndRecord({
       job,
       corpusId,
@@ -84,8 +88,11 @@ async function runArticlePdfJob({ job, jobs }) {
     })
     log('HTML uploaded to object storage')
 
+    jobs.throwIfCancelled(job.id)
     await htmlToPdf({ htmlPaths: [htmlPath], pdfPath, log })
     jobs.setProgress(job.id, 0.9)
+    jobs.throwIfCancelled(job.id)
+
     await uploadAndRecord({
       job,
       corpusId,
@@ -100,6 +107,13 @@ async function runArticlePdfJob({ job, jobs }) {
 
     jobs.setProgress(job.id, 1)
     jobs.setStatus(job.id, 'succeeded')
+  } catch (err) {
+    if (err instanceof jobs.CancelledError) {
+      log('Job was cancelled before completion; cleaning up scratch dir.')
+      // status was already set to 'cancelled' by /jobs/:id/cancel
+      return
+    }
+    throw err
   } finally {
     await fs.rm(work, { recursive: true, force: true })
   }
