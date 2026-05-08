@@ -3,18 +3,23 @@ import { useSelector } from 'react-redux'
 
 import { executeQuery } from '../helpers/graphQL.js'
 import {
+  applyPageNumbers as applyPageNumbersMutation,
   cancelPipelineJob as cancelMutation,
   getCorpusArtefactSummary,
   getCorpusIssueMetadata,
   getPipelineHealth,
   getPipelineJob,
   getPipelineJobs,
+  pushAuthorBiosToOJS as pushBiosMutation,
+  pushDoisToOJS as pushDoisMutation,
+  pushPageNumbersToOJS as pushPagesMutation,
   startBatchBuild as startBatchBuildMutation,
   startBuildArticle as startBuildArticleMutation,
   startBuildCompleteIssue as startBuildCompleteIssueMutation,
   startBuildCovers as startBuildCoversMutation,
   startBuildFrontPage as startBuildFrontPageMutation,
   startBuildToc as startBuildTocMutation,
+  startPageNumberSync as startPageNumberSyncMutation,
   syncArticleYaml as syncArticleYamlMutation,
   updateCorpusIssueMetadata as updateCorpusIssueMetadataMutation,
 } from './Pipeline.graphql'
@@ -416,6 +421,101 @@ export function useStartBuildCompleteIssue({ corpusId } = {}) {
     mutationKey: 'startBuildCompleteIssue',
   })
 }
+
+/**
+ * Page-number sync: kicks off the pipeline page-numbers job, exposes the
+ * computed mapping (job.params.results once succeeded), and provides an
+ * `apply` action that POSTs the mapping back to graphql for YAML rewriting.
+ */
+export function usePageNumberSync({ corpusId } = {}) {
+  const sessionToken = useSelector((state) => state.sessionToken)
+  const job = useCorpusJobMutation({
+    corpusId,
+    mutation: startPageNumberSyncMutation,
+    mutationKey: 'startPageNumberSync',
+  })
+  const [applyResult, setApplyResult] = useState(null)
+  const [applyError, setApplyError] = useState(null)
+  const [applying, setApplying] = useState(false)
+
+  const apply = useCallback(async () => {
+    const results = job.job?.params?.results
+    if (!Array.isArray(results) || results.length === 0) return null
+    const entries = results
+      .filter((r) => Number.isInteger(r.startPage))
+      .map((r) => ({
+        articleId: r.articleId,
+        startPage: r.startPage,
+        pageCount: r.pageCount ?? null,
+      }))
+    if (entries.length === 0) return null
+    setApplying(true)
+    setApplyError(null)
+    try {
+      const data = await executeQuery({
+        sessionToken,
+        query: applyPageNumbersMutation,
+        variables: { input: { corpusId, entries } },
+      })
+      setApplyResult(data?.applyPageNumbers || null)
+      return data?.applyPageNumbers
+    } catch (err) {
+      setApplyError(err.message)
+      return null
+    } finally {
+      setApplying(false)
+    }
+  }, [corpusId, job.job?.params?.results, sessionToken])
+
+  return { ...job, apply, applying, applyResult, applyError }
+}
+
+function makeOjsPushHook(mutation, mutationKey) {
+  return function useOjsPush() {
+    const sessionToken = useSelector((state) => state.sessionToken)
+    const [busy, setBusy] = useState(false)
+    const [summary, setSummary] = useState(null)
+    const [error, setError] = useState(null)
+
+    const push = useCallback(
+      async ({ instance, entries, apply = false } = {}) => {
+        setBusy(true)
+        setError(null)
+        try {
+          const data = await executeQuery({
+            sessionToken,
+            query: mutation,
+            variables: { instance, entries, apply },
+          })
+          const next = data?.[mutationKey]
+          setSummary(next || null)
+          return next
+        } catch (err) {
+          setError(err.message)
+          return null
+        } finally {
+          setBusy(false)
+        }
+      },
+      [sessionToken]
+    )
+
+    return { push, busy, summary, error, reset: () => setSummary(null) }
+  }
+}
+
+export const usePushPageNumbersToOjs = makeOjsPushHook(
+  pushPagesMutation,
+  'pushPageNumbersToOJS'
+)
+export const usePushDoisToOjs = makeOjsPushHook(
+  pushDoisMutation,
+  'pushDoisToOJS'
+)
+export const usePushAuthorBiosToOjs = makeOjsPushHook(
+  pushBiosMutation,
+  'pushAuthorBiosToOJS'
+)
 
 /**
  * Rebuild + persist an article's YAML frontmatter. Returns the rewritten

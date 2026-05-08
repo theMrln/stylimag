@@ -1,0 +1,94 @@
+.panel {
+  border: 1px solid #e1e1e1;
+  border-radius: 0.25rem;
+  padding: 1rem 1.25rem;
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.title {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.subtitle {
+  margin: 0;
+  color: #6b7280;
+  font-size: 0.85rem;
+}
+
+.targetRow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.targetLabel {
+  font-size: 0.85rem;
+  color: #4b5563;
+}
+
+.targetSelect {
+  padding: 0.25rem 0.5rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.2rem;
+}
+
+.section {
+  border: 1px solid #f0f0f0;
+  border-radius: 0.25rem;
+  padding: 0.75rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.help {
+  margin: 0.15rem 0 0;
+  color: #6b7280;
+  font-size: 0.85rem;
+}
+
+.actions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.error {
+  color: #b3261e;
+  font-size: 0.85rem;
+}
+
+.summary {
+  background: #fafafa;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.2rem;
+  font-size: 0.85rem;
+}
+
+.summaryHeader {
+  margin: 0 0 0.4rem;
+  color: #277a3a;
+}
+
+.summaryDetails {
+  background: #1f2937;
+  color: #e5e7eb;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.25rem;
+  max-height: 16rem;
+  overflow: auto;
+  font-size: 0.7rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+}

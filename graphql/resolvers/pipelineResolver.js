@@ -117,6 +117,12 @@ async function refreshFromPipeline(job) {
       const tail = remote.logs.slice(-50).join('\n') + '\n'
       job.appendLogTail(tail)
     }
+    // Carry runner-side enriched params back into local state — page-numbers
+    // attaches its computed mapping under params.results so the resolver can
+    // present it for review and apply it to article YAMLs.
+    if (remote.params && typeof remote.params === 'object') {
+      job.params = { ...(job.params || {}), ...remote.params }
+    }
     if (isTerminal(job.status)) {
       await persistArtefacts(job, remote)
     }
@@ -362,6 +368,129 @@ module.exports = {
         corpusId,
         context,
       })
+    },
+
+    /**
+     * Probe every article in the corpus for its page count via the pipeline
+     * service (pdf-lib), and stash the mapping on the resulting PipelineJob
+     * for the front-end to review and apply.
+     *
+     * Reads the most-recent succeeded `article-pdf` ExportArtifact for each
+     * article; articles without a built PDF are reported with a `missing-pdf`
+     * marker so the UI can prompt the user to build first.
+     */
+    async startPageNumberSync(_, { corpusId, startPage = 1 }, context) {
+      if (!context.user) throw new NotAuthenticatedError()
+      if (!(await pipelineClient.isConfigured())) {
+        throw new BadRequestError('Pipeline service is not configured')
+      }
+      const corpus = await Corpus.findById(corpusId)
+      if (!corpus) throw new NotFoundError('Corpus', corpusId)
+
+      const articleIds = (corpus.articles || [])
+        .map((ca) => ca.article?._id ?? ca.article)
+        .filter(Boolean)
+        .map(String)
+
+      const items = []
+      for (const articleId of articleIds) {
+        const latest = await ExportArtifact.findOne({
+          article: articleId,
+          corpus: corpus._id,
+          kind: 'article-pdf',
+          status: 'ready',
+        })
+          .sort({ createdAt: -1 })
+          .lean()
+        items.push({
+          articleId,
+          storageKey: latest?.storageKey || null,
+        })
+      }
+      const ready = items.filter((i) => i.storageKey)
+      if (ready.length === 0) {
+        throw new BadRequestError(
+          'No built article PDFs found. Run a batch build first.'
+        )
+      }
+
+      const job = await PipelineJob.create({
+        type: 'page-numbers',
+        status: 'queued',
+        corpus: corpus._id,
+        workspace: corpus.workspace || undefined,
+        triggeredBy: context.user._id,
+        params: {
+          corpusId: corpus._id.toString(),
+          startPage,
+          missingArticles: items
+            .filter((i) => !i.storageKey)
+            .map((i) => i.articleId),
+        },
+      })
+      try {
+        const remote = await pipelineClient.startJob({
+          type: 'page-numbers',
+          params: {
+            corpusId: corpus._id.toString(),
+            startPage,
+            articles: ready,
+          },
+        })
+        job.remoteJobId = remote.id
+        job.status = remote.status || 'queued'
+        await job.save()
+      } catch (err) {
+        job.status = 'failed'
+        job.error = err.message
+        await job.save()
+        throw err
+      }
+      return job
+    },
+
+    /**
+     * Apply a previously-computed page-number mapping to each article's
+     * workingVersion metadata + YAML. Returns the updated articles' ids.
+     * Idempotent — running again with the same mapping is a no-op.
+     */
+    async applyPageNumbers(_, { input }, context) {
+      if (!context.user) throw new NotAuthenticatedError()
+      if (!Array.isArray(input?.entries) || input.entries.length === 0) {
+        throw new BadRequestError('input.entries[] is empty')
+      }
+      const updated = []
+      for (const entry of input.entries) {
+        if (!entry?.articleId || !Number.isInteger(entry.startPage)) continue
+        let article
+        try {
+          article = await getArticleByContext(entry.articleId, context)
+        } catch (err) {
+          logger.warn(
+            { err, articleId: entry.articleId },
+            'applyPageNumbers: skipped article (no access)'
+          )
+          continue
+        }
+        const metadata = {
+          ...(article.workingVersion?.metadata ?? {}),
+          start_page: entry.startPage,
+        }
+        if (entry.pageCount) metadata.page_count = entry.pageCount
+        article.workingVersion.metadata = metadata
+        const corpus = input.corpusId
+          ? await Corpus.findById(input.corpusId)
+          : null
+        const { markdown } = rebuildArticleYaml({ article, corpus })
+        article.workingVersion.md = markdown
+        await article.save()
+        updated.push({
+          articleId: article._id.toString(),
+          startPage: entry.startPage,
+          pageCount: entry.pageCount ?? null,
+        })
+      }
+      return { applied: updated.length, entries: updated }
     },
 
     /**

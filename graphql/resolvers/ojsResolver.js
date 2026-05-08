@@ -181,6 +181,8 @@ async function syncOjsAuthors(
   }
 }
 
+const ojsPush = require('../helpers/ojsPush')
+
 module.exports = {
   Query: {
     async ojsInstances(_, _args, { user }) {
@@ -786,6 +788,40 @@ module.exports = {
       }
 
       return updated
+    },
+
+    /**
+     * Push a list of {submissionId, publicationId, startPage, pageCount}
+     * entries back to OJS as `pages` strings on each publication. Defaults
+     * to dry-run; pass apply: true to actually issue the PUTs.
+     */
+    async pushPageNumbersToOJS(
+      _,
+      { instance, entries, apply = false },
+      { user }
+    ) {
+      if (!user) throw new NotAuthenticatedError()
+      return ojsPush.pushPageNumbers({ instance, entries, apply })
+    },
+
+    /**
+     * Push DOIs back to OJS publications.
+     */
+    async pushDoisToOJS(_, { instance, entries, apply = false }, { user }) {
+      if (!user) throw new NotAuthenticatedError()
+      return ojsPush.pushDois({ instance, entries, apply })
+    },
+
+    /**
+     * Push author biographies back to OJS publication authors.
+     */
+    async pushAuthorBiosToOJS(
+      _,
+      { instance, entries, apply = false },
+      { user }
+    ) {
+      if (!user) throw new NotAuthenticatedError()
+      return ojsPush.pushAuthorBios({ instance, entries, apply })
     },
   },
 }

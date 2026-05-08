@@ -6,6 +6,8 @@ import { Link, useParams } from 'react-router'
 import BuildPanel from '../organisms/production/BuildPanel.jsx'
 import IssueMetadataPanel from '../organisms/production/IssueMetadataPanel.jsx'
 import JobDashboard from '../organisms/production/JobDashboard.jsx'
+import OjsPushPanel from '../organisms/production/OjsPushPanel.jsx'
+import PageNumberSyncPanel from '../organisms/production/PageNumberSyncPanel.jsx'
 import PipelineHealthBadge from '../organisms/production/PipelineHealthBadge.jsx'
 import { PageTitle } from '../atoms/index.js'
 
@@ -46,6 +48,12 @@ export default function Production() {
 
       <BuildPanel corpusId={corpusId} onJobStarted={handleJobStarted} />
       <IssueMetadataPanel corpusId={corpusId} />
+      <PageNumberSyncPanel corpusId={corpusId} />
+      <OjsPushPanel
+        pageNumberEntries={[]}
+        doiEntries={[]}
+        bioEntries={[]}
+      />
       <JobDashboard key={dashboardKey} corpusId={corpusId} />
     </section>
   )

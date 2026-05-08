@@ -559,6 +559,58 @@ type ArticleYamlSyncResult {
   markdown: String!
 }
 
+input ApplyPageNumbersEntry {
+  articleId: ID!
+  startPage: Int!
+  pageCount: Int
+}
+
+input ApplyPageNumbersInput {
+  corpusId: ID
+  entries: [ApplyPageNumbersEntry!]!
+}
+
+type ApplyPageNumbersResultEntry {
+  articleId: ID!
+  startPage: Int!
+  pageCount: Int
+}
+
+type ApplyPageNumbersResult {
+  applied: Int!
+  entries: [ApplyPageNumbersResultEntry!]!
+}
+
+input OjsPushPageNumberEntry {
+  submissionId: Int!
+  publicationId: Int!
+  startPage: Int!
+  pageCount: Int
+}
+
+input OjsPushDoiEntry {
+  submissionId: Int!
+  publicationId: Int!
+  doi: String!
+}
+
+input OjsPushBioEntry {
+  submissionId: Int!
+  publicationId: Int!
+  authorId: Int!
+  biography: JSON
+}
+
+"""
+Result of a single OJS push helper. Each item carries the original
+identifiers + ok/dryRun/error so the UI can render a per-row outcome.
+"""
+type OjsPushSummary {
+  applied: Int!
+  dryRun: Boolean!
+  items: [JSON!]!
+}
+
 """
 Lightweight reflection of the pipeline service's /health endpoint, used by the
 PipelineHealthBadge in the production UI.
@@ -850,6 +902,43 @@ type Mutation {
   rewritten markdown is persisted back into the article's workingVersion.
   """
   syncArticleYaml(articleId: ID!, corpusId: ID): ArticleYamlSyncResult
+
+  """
+  Probe every article-pdf in the corpus for its page count, accumulating
+  start_page across the issue. Returns the running PipelineJob; when
+  succeeded its params.results carries the proposed mapping.
+  """
+  startPageNumberSync(corpusId: ID!, startPage: Int = 1): PipelineJob
+
+  """
+  Persist a previously-computed page-number mapping into each article's
+  workingVersion metadata + YAML. Idempotent.
+  """
+  applyPageNumbers(input: ApplyPageNumbersInput!): ApplyPageNumbersResult
+
+  """
+  Push pages strings back to OJS publications. Defaults to dry-run; pass
+  apply: true to actually issue the PUTs.
+  """
+  pushPageNumbersToOJS(
+    instance: OjsInstance!
+    entries: [OjsPushPageNumberEntry!]!
+    apply: Boolean = false
+  ): OjsPushSummary
+
+  """Push DOIs back to OJS publications. Defaults to dry-run."""
+  pushDoisToOJS(
+    instance: OjsInstance!
+    entries: [OjsPushDoiEntry!]!
+    apply: Boolean = false
+  ): OjsPushSummary
+
+  """Push author biographies back to OJS publication authors. Defaults to dry-run."""
+  pushAuthorBiosToOJS(
+    instance: OjsInstance!
+    entries: [OjsPushBioEntry!]!
+    apply: Boolean = false
+  ): OjsPushSummary
 
   """Cancel a running or queued pipeline job."""
   cancelPipelineJob(id: ID!): PipelineJob

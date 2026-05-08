@@ -136,6 +136,7 @@ function summarise(job) {
     logs: job.logs,
     artefacts: job.artefacts,
     error: job.error,
+    params: job.params,
     createdAt: job.createdAt,
     startedAt: job.startedAt,
     finishedAt: job.finishedAt,

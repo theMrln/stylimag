@@ -5,6 +5,14 @@ const {
   HeadBucketCommand,
   CreateBucketCommand,
 } = require('@aws-sdk/client-s3')
+
+async function streamToBuffer(stream) {
+  const chunks = []
+  for await (const chunk of stream) {
+    chunks.push(chunk instanceof Buffer ? chunk : Buffer.from(chunk))
+  }
+  return Buffer.concat(chunks)
+}
 const { getSignedUrl } = require('@aws-sdk/s3-request-presigner')
 const { logger } = require('./logger')
 
@@ -81,6 +89,14 @@ async function putObject({ key, body, contentType }) {
   return { key, bucket: config.bucket }
 }
 
+async function getObjectBuffer(key) {
+  const client = getClient()
+  const res = await client.send(
+    new GetObjectCommand({ Bucket: config.bucket, Key: key })
+  )
+  return streamToBuffer(res.Body)
+}
+
 async function getPresignedGetUrl(key, expiresInSeconds = 600) {
   const client = getClient()
   return getSignedUrl(
@@ -94,6 +110,7 @@ module.exports = {
   isStorageConfigured,
   ensureBucket,
   putObject,
+  getObjectBuffer,
   getPresignedGetUrl,
   bucket: () => config.bucket,
 }

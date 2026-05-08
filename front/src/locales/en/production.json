@@ -85,5 +85,46 @@
     "toc": "Table of contents",
     "front-page": "Front page",
     "complete-issue": "Complete-issue PDF"
+  },
+  "pageNumbers": {
+    "title": "Page numbers",
+    "subtitle": "Probe each article PDF for its page count, then commit the running start_page back into article YAML.",
+    "startPage": "Issue start page",
+    "compute": "compute mapping",
+    "computing": "computing…",
+    "apply": "apply to article YAML",
+    "applying": "applying…",
+    "applied": "{{n}} article(s) updated",
+    "noResults": "No mapping was produced.",
+    "col": {
+      "article": "article",
+      "start": "start_page",
+      "pages": "pages",
+      "status": "status"
+    }
+  },
+  "ojsPush": {
+    "title": "Push to OJS",
+    "subtitle": "Send page numbers, DOIs, and author bios back to the journal management system. Defaults to dry-run; nothing is sent until you click \"apply\".",
+    "target": "OJS target",
+    "dryRunLabel": "dry run",
+    "applyLabel": "apply",
+    "summary": {
+      "dryRun": "{{n}} item(s) ready (dry run)",
+      "applied": "{{n}} item(s) applied",
+      "details": "show details"
+    },
+    "pages": {
+      "title": "Page numbers",
+      "help": "Push start_page → 'pages' string for each publication."
+    },
+    "dois": {
+      "title": "DOIs",
+      "help": "Push DOIs as publication-level identifiers."
+    },
+    "bios": {
+      "title": "Author bios",
+      "help": "Push author biographies into each publication's authors."
+    }
   }
 }

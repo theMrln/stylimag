@@ -121,6 +121,59 @@ mutation syncArticleYaml($articleId: ID!, $corpusId: ID) {
   }
 }
 
+mutation startPageNumberSync($corpusId: ID!, $startPage: Int = 1) {
+  startPageNumberSync(corpusId: $corpusId, startPage: $startPage) {
+    ...basicPipelineJobFields
+  }
+}
+
+mutation applyPageNumbers($input: ApplyPageNumbersInput!) {
+  applyPageNumbers(input: $input) {
+    applied
+    entries {
+      articleId
+      startPage
+      pageCount
+    }
+  }
+}
+
+mutation pushPageNumbersToOJS(
+  $instance: OjsInstance!
+  $entries: [OjsPushPageNumberEntry!]!
+  $apply: Boolean = false
+) {
+  pushPageNumbersToOJS(instance: $instance, entries: $entries, apply: $apply) {
+    applied
+    dryRun
+    items
+  }
+}
+
+mutation pushDoisToOJS(
+  $instance: OjsInstance!
+  $entries: [OjsPushDoiEntry!]!
+  $apply: Boolean = false
+) {
+  pushDoisToOJS(instance: $instance, entries: $entries, apply: $apply) {
+    applied
+    dryRun
+    items
+  }
+}
+
+mutation pushAuthorBiosToOJS(
+  $instance: OjsInstance!
+  $entries: [OjsPushBioEntry!]!
+  $apply: Boolean = false
+) {
+  pushAuthorBiosToOJS(instance: $instance, entries: $entries, apply: $apply) {
+    applied
+    dryRun
+    items
+  }
+}
+
 query getCorpusIssueMetadata($corpusId: ID!) {
   corpus: sharedCorpus(corpusId: $corpusId) {
     _id
