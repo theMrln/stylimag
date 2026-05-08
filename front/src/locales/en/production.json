@@ -13,6 +13,7 @@
   },
   "page": {
     "title": "Production",
+    "titleWithName": "{{name}} — Production",
     "heading": "Production pipeline",
     "intro": "Build per-article PDFs and follow the publishing pipeline. Issue-level artefacts (covers, TOC, complete-issue) and OJS push-back land in later phases.",
     "crumbs": {
@@ -34,6 +35,7 @@
     "statusRunning": "running… {{pct}}%",
     "statusOk": "done ✓",
     "statusFail": "failed ✗",
+    "statusStub": "stub — port pending",
     "statusCancelled": "cancelled",
     "batch": {
       "label": "Batch build all articles",

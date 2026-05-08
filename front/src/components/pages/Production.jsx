@@ -3,6 +3,7 @@ import { Helmet } from 'react-helmet-async'
 import { useTranslation } from 'react-i18next'
 import { Link, useParams } from 'react-router'
 
+import { useCorpusIssueMetadata } from '../../hooks/pipeline.js'
 import BuildPanel from '../organisms/production/BuildPanel.jsx'
 import IssueMetadataPanel from '../organisms/production/IssueMetadataPanel.jsx'
 import JobDashboard from '../organisms/production/JobDashboard.jsx'
@@ -18,6 +19,8 @@ import styles from './Production.module.scss'
 export default function Production() {
   const { t } = useTranslation('production', { useSuspense: false })
   const { corpusId } = useParams()
+  const { data: corpus } = useCorpusIssueMetadata({ corpusId })
+  const corpusLabel = corpus?.name || corpusId
   const [dashboardKey, setDashboardKey] = useState(0)
 
   // Bump the dashboard key whenever a new job is started so the list
@@ -27,7 +30,13 @@ export default function Production() {
   return (
     <section className={styles.section}>
       <Helmet>
-        <title>{t('page.title', 'Production')}</title>
+        <title>
+          {corpus?.name
+            ? t('page.titleWithName', '{{name}} — Production', {
+                name: corpus.name,
+              })
+            : t('page.title', 'Production')}
+        </title>
       </Helmet>
 
       <header className={styles.header}>
@@ -45,7 +54,7 @@ export default function Production() {
       <nav className={styles.crumbs}>
         <Link to="/corpus">{t('page.crumbs.allCorpora', 'all corpora')}</Link>
         <span aria-hidden="true">›</span>
-        <span>{corpusId}</span>
+        <span title={corpusId}>{corpusLabel}</span>
       </nav>
 
       <BuildPanel corpusId={corpusId} onJobStarted={handleJobStarted} />

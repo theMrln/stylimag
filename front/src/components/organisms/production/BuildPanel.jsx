@@ -11,6 +11,10 @@ import { Button } from '../../atoms/index.js'
 
 import styles from './BuildPanel.module.scss'
 
+function isStubError(error) {
+  return typeof error === 'string' && /not yet implemented/i.test(error)
+}
+
 function statusLine(t, runner) {
   if (!runner.job) return null
   if (runner.job.status === 'queued') return t('buildPanel.statusQueued', 'queued…')
@@ -19,16 +23,21 @@ function statusLine(t, runner) {
       pct: Math.round((runner.job.progress ?? 0) * 100),
     })
   if (runner.job.status === 'succeeded') return t('buildPanel.statusOk', 'done ✓')
-  if (runner.job.status === 'failed')
+  if (runner.job.status === 'failed') {
+    if (isStubError(runner.job.error)) {
+      return t('buildPanel.statusStub', 'stub — port pending')
+    }
     return t('buildPanel.statusFail', 'failed ✗')
+  }
   if (runner.job.status === 'cancelled')
     return t('buildPanel.statusCancelled', 'cancelled')
   return runner.job.status
 }
 
 function ActionRow({ label, description, runner, t, onAfter }) {
+  const stub = isStubError(runner.job?.error)
   return (
-    <li className={styles.row}>
+    <li className={styles.row} data-stub={stub ? 'true' : undefined}>
       <div>
         <strong className={styles.rowLabel}>{label}</strong>
         <p className={styles.rowDescription}>{description}</p>
@@ -47,8 +56,12 @@ function ActionRow({ label, description, runner, t, onAfter }) {
             ? t('buildPanel.runningLabel', 'running…')
             : t('buildPanel.runLabel', 'run')}
         </Button>
-        <span className={styles.rowStatus}>{statusLine(t, runner)}</span>
-        {runner.error && <span className={styles.rowError}>{runner.error}</span>}
+        <span className={styles.rowStatus} data-stub={stub ? 'true' : undefined}>
+          {statusLine(t, runner)}
+        </span>
+        {runner.error && !stub && (
+          <span className={styles.rowError}>{runner.error}</span>
+        )}
       </div>
     </li>
   )

@@ -56,6 +56,11 @@
   font-size: 0.85rem;
   color: #1c5f8e;
   min-width: 6rem;
+
+  &[data-stub='true'] {
+    color: #8a6d3b;
+    font-style: italic;
+  }
 }
 
 .rowError {
