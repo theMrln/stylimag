@@ -401,6 +401,53 @@ input UpdateCorpusInput {
   metadata: JSON
 }
 
+"""
+Editorial board entry for a journal issue. Locally edited; not pushed to OJS.
+"""
+type CorpusEditor {
+  familyName: String
+  givenName: String
+  email: String
+  ORCID: String
+  affiliation: String
+  bio: String
+}
+
+input CorpusEditorInput {
+  familyName: String
+  givenName: String
+  email: String
+  ORCID: String
+  affiliation: String
+  bio: String
+}
+
+"""
+Per-corpus pipeline configuration. References template/CSS overrides in
+object storage so editors can swap house style per issue without a
+container rebuild.
+"""
+type CorpusPipelineSettings {
+  templateId: String
+  cssOverrideRef: String
+  ojsTargetId: String
+  staticDeployTargetId: String
+  princeEnabled: Boolean
+}
+
+input CorpusPipelineSettingsInput {
+  templateId: String
+  cssOverrideRef: String
+  ojsTargetId: String
+  staticDeployTargetId: String
+  princeEnabled: Boolean
+}
+
+input UpdateCorpusIssueMetadataInput {
+  editors: [CorpusEditorInput!]
+  imageCredit: JSON
+}
+
 type Corpus {
   _id: String!
   type: CorpusType!
@@ -412,6 +459,9 @@ type Corpus {
   creator: User!
   createdAt: DateTime
   updatedAt: DateTime
+  editors: [CorpusEditor!]!
+  imageCredit: JSON
+  pipelineSettings: CorpusPipelineSettings
 
   article(articleId: ID!): CorpusArticle
 
@@ -419,6 +469,8 @@ type Corpus {
   addArticle(articleId: ID!): Corpus
   rename(name: String!): Corpus
   updateMetadata(metadata: JSON!): Corpus
+  updateIssueMetadata(input: UpdateCorpusIssueMetadataInput!): Corpus
+  updatePipelineSettings(input: CorpusPipelineSettingsInput!): Corpus
   updateArticlesOrder(articlesOrderInput: [ArticleOrder!]!): Corpus
   delete(deleteArticles: Boolean): Corpus!
   update(updateCorpusInput: UpdateCorpusInput!): Corpus!
@@ -494,6 +546,17 @@ type PipelineJob {
   finishedAt: DateTime
   createdAt: DateTime
   updatedAt: DateTime
+}
+
+"""
+Result of a YAML re-sync on a single article. The markdown is the rebuilt
+working-version body with the regenerated frontmatter spliced in.
+"""
+type ArticleYamlSyncResult {
+  articleId: ID!
+  corpusId: ID
+  yaml: String!
+  markdown: String!
 }
 
 """
@@ -765,6 +828,28 @@ type Mutation {
   Returns the local PipelineJob; poll \`pipelineJob(id)\` to track status.
   """
   startBuildArticle(articleId: ID!, corpusId: ID!, engine: PdfEngine = paged): PipelineJob
+
+  """Build PDFs for every buildable article in the corpus in a single batch."""
+  startBatchBuild(corpusId: ID!, engine: PdfEngine = paged): PipelineJob
+
+  """Generate per-article cover pages for the corpus."""
+  startBuildCovers(corpusId: ID!): PipelineJob
+
+  """Generate the table of contents page for the corpus."""
+  startBuildToc(corpusId: ID!): PipelineJob
+
+  """Generate the front-matter / front-page artefact for the corpus."""
+  startBuildFrontPage(corpusId: ID!): PipelineJob
+
+  """Assemble the complete-issue PDF (front page + TOC + every article)."""
+  startBuildCompleteIssue(corpusId: ID!): PipelineJob
+
+  """
+  Rebuild the YAML frontmatter for an article from its workingVersion
+  metadata + corpus-level fields (issue id, editors, imageCredit). The
+  rewritten markdown is persisted back into the article's workingVersion.
+  """
+  syncArticleYaml(articleId: ID!, corpusId: ID): ArticleYamlSyncResult
 
   """Cancel a running or queued pipeline job."""
   cancelPipelineJob(id: ID!): PipelineJob

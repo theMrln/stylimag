@@ -25,5 +25,65 @@
     "cancel": "cancel",
     "logs": "logs",
     "empty": "No pipeline jobs yet for this corpus."
+  },
+  "buildPanel": {
+    "title": "Build issue artefacts",
+    "runLabel": "run",
+    "runningLabel": "running…",
+    "statusQueued": "queued…",
+    "statusRunning": "running… {{pct}}%",
+    "statusOk": "done ✓",
+    "statusFail": "failed ✗",
+    "statusCancelled": "cancelled",
+    "batch": {
+      "label": "Batch build all articles",
+      "description": "Run the article-PDF pipeline against every article in this corpus, sequentially."
+    },
+    "covers": {
+      "label": "Article cover pages",
+      "description": "Per-article cover pages. Renderer port pending — runs as a stub for now and surfaces the gap in the dashboard."
+    },
+    "toc": {
+      "label": "Table of contents",
+      "description": "TOC page. Renderer port pending."
+    },
+    "frontPage": {
+      "label": "Front page / front matter",
+      "description": "Cover + masthead artefact. Renderer port pending."
+    },
+    "completeIssue": {
+      "label": "Complete issue PDF",
+      "description": "Front page + TOC + every article PDF, merged. Renderer port pending."
+    }
+  },
+  "issueMetadata": {
+    "title": "Issue metadata",
+    "subtitle": "Editors and cover-image credit. Local-only — never pushed back to OJS.",
+    "editors": "Editors",
+    "noEditors": "No editors yet — add one below.",
+    "editorN": "Editor {{n}}",
+    "remove": "remove",
+    "addEditor": "+ add editor",
+    "imageCredit": "Cover image credit",
+    "save": "save metadata",
+    "saving": "saving…",
+    "savedAt": "saved at {{when}}",
+    "field": {
+      "familyName": "Family name",
+      "givenName": "Given name",
+      "email": "Email",
+      "ORCID": "ORCID",
+      "affiliation": "Affiliation",
+      "bio": "Bio"
+    }
+  },
+  "badges": {
+    "aria": "Publishing artefacts",
+    "inFlightTooltip": "A pipeline job is in flight…",
+    "article-pdf": "Per-article PDFs",
+    "article-cover": "Article covers",
+    "toc": "Table of contents",
+    "front-page": "Front page",
+    "complete-issue": "Complete-issue PDF"
   }
 }

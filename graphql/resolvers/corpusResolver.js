@@ -287,6 +287,47 @@ module.exports = {
       return corpus.save()
     },
 
+    /**
+     * Update the issue-level editorial metadata (editors[], imageCredit{}).
+     * These are local-only fields and never pushed back to OJS — they drive
+     * the front-page / TOC artefacts the publisher renders.
+     */
+    async updateIssueMetadata(corpus, { input }) {
+      if (Array.isArray(input?.editors)) {
+        corpus.editors = input.editors.map((e) => ({
+          familyName: e.familyName ?? '',
+          givenName: e.givenName ?? '',
+          email: e.email ?? '',
+          ORCID: e.ORCID ?? '',
+          affiliation: e.affiliation ?? '',
+          bio: e.bio ?? '',
+        }))
+      }
+      if (input?.imageCredit && typeof input.imageCredit === 'object') {
+        corpus.imageCredit = input.imageCredit
+      }
+      return corpus.save()
+    },
+
+    /**
+     * Update the per-corpus publishing pipeline configuration (template /
+     * CSS override / OJS target / static-deploy target).
+     */
+    async updatePipelineSettings(corpus, { input }) {
+      const next = { ...(corpus.pipelineSettings?.toObject?.() ?? corpus.pipelineSettings ?? {}) }
+      for (const key of [
+        'templateId',
+        'cssOverrideRef',
+        'ojsTargetId',
+        'staticDeployTargetId',
+        'princeEnabled',
+      ]) {
+        if (input[key] !== undefined) next[key] = input[key]
+      }
+      corpus.pipelineSettings = next
+      return corpus.save()
+    },
+
     async addArticle(corpus, { articleId, order }) {
       const articleAlreadyAdded = corpus.articles.find(
         ({ article }) => article.id === articleId

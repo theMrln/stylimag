@@ -19,6 +19,7 @@ import {
 } from '../../molecules/index.js'
 
 import Export from '../export/Export.jsx'
+import CorpusArtefactBadges from '../production/CorpusArtefactBadges.jsx'
 import CorpusArticles from './CorpusArticles.jsx'
 import CorpusForm from './CorpusForm.jsx'
 import CorpusMetadata from './CorpusMetadata.jsx'
@@ -96,6 +97,9 @@ export default function CorpusItem({ corpus }) {
             {corpus.name}
           </h2>
           <Badge className={styles.badge} label={t(`types.${corpus.type}`)} />
+          {corpus.type === 'journal' && (
+            <CorpusArtefactBadges corpusId={corpus._id} />
+          )}
         </div>
 
         <div role="menu" className={styles.actionButtons}>

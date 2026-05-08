@@ -51,6 +51,21 @@ query getPipelineJobs($corpusId: ID, $limit: Int) {
   }
 }
 
+query getCorpusArtefactSummary($corpusId: ID, $limit: Int = 50) {
+  pipelineJobs(corpusId: $corpusId, limit: $limit) {
+    _id
+    type
+    status
+    finishedAt
+    artefacts {
+      _id
+      kind
+      format
+      status
+    }
+  }
+}
+
 mutation startBuildArticle(
   $articleId: ID!
   $corpusId: ID!
@@ -64,5 +79,88 @@ mutation startBuildArticle(
 mutation cancelPipelineJob($id: ID!) {
   cancelPipelineJob(id: $id) {
     ...basicPipelineJobFields
+  }
+}
+
+mutation startBatchBuild($corpusId: ID!, $engine: PdfEngine = paged) {
+  startBatchBuild(corpusId: $corpusId, engine: $engine) {
+    ...basicPipelineJobFields
+  }
+}
+
+mutation startBuildCovers($corpusId: ID!) {
+  startBuildCovers(corpusId: $corpusId) {
+    ...basicPipelineJobFields
+  }
+}
+
+mutation startBuildToc($corpusId: ID!) {
+  startBuildToc(corpusId: $corpusId) {
+    ...basicPipelineJobFields
+  }
+}
+
+mutation startBuildFrontPage($corpusId: ID!) {
+  startBuildFrontPage(corpusId: $corpusId) {
+    ...basicPipelineJobFields
+  }
+}
+
+mutation startBuildCompleteIssue($corpusId: ID!) {
+  startBuildCompleteIssue(corpusId: $corpusId) {
+    ...basicPipelineJobFields
+  }
+}
+
+mutation syncArticleYaml($articleId: ID!, $corpusId: ID) {
+  syncArticleYaml(articleId: $articleId, corpusId: $corpusId) {
+    articleId
+    corpusId
+    yaml
+    markdown
+  }
+}
+
+query getCorpusIssueMetadata($corpusId: ID!) {
+  corpus: sharedCorpus(corpusId: $corpusId) {
+    _id
+    name
+    type
+    editors {
+      familyName
+      givenName
+      email
+      ORCID
+      affiliation
+      bio
+    }
+    imageCredit
+    pipelineSettings {
+      templateId
+      cssOverrideRef
+      ojsTargetId
+      staticDeployTargetId
+      princeEnabled
+    }
+  }
+}
+
+mutation updateCorpusIssueMetadata(
+  $corpusId: ID!
+  $input: UpdateCorpusIssueMetadataInput!
+) {
+  corpus(corpusId: $corpusId) {
+    updateIssueMetadata(input: $input) {
+      _id
+      editors {
+        familyName
+        givenName
+        email
+        ORCID
+        affiliation
+        bio
+      }
+      imageCredit
+    }
   }
 }

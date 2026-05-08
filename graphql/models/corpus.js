@@ -22,6 +22,50 @@ const CorpusArticleSchema = new Schema({
   seq: Number,
 })
 
+/**
+ * Per-issue editorial board entry. Mirrors the snake_case shape used by
+ * imaginations-issue-template's local issue_XXXX.json files but normalised
+ * to camelCase here. An empty array is valid (issues without explicit
+ * editor lists fall back to OJS-derived data).
+ */
+const CorpusEditorSchema = new Schema(
+  {
+    familyName: { type: String, default: '' },
+    givenName: { type: String, default: '' },
+    email: { type: String, default: '' },
+    ORCID: { type: String, default: '' },
+    affiliation: { type: String, default: '' },
+    bio: { type: String, default: '' },
+  },
+  { _id: false }
+)
+
+/**
+ * Locale-keyed cover-image credit line. Keys mirror the OJS locale codes
+ * used elsewhere in the project (en, en_US, fr_CA, …); empty object is
+ * valid.
+ */
+const CorpusImageCreditSchema = new Schema({}, { _id: false, strict: false })
+
+/**
+ * Per-corpus configuration that drives the publishing pipeline:
+ *  - which template + CSS to use (refs into MinIO when overridden)
+ *  - which OJS instance to push to
+ *  - which static-deploy target to publish to
+ * Defaults are filled in lazily by the pipeline runner if the field is
+ * empty, so existing corpora keep working without an explicit migration.
+ */
+const PipelineSettingsSchema = new Schema(
+  {
+    templateId: { type: String, default: '' },
+    cssOverrideRef: { type: String, default: '' },
+    ojsTargetId: { type: String, default: '' },
+    staticDeployTargetId: { type: String, default: '' },
+    princeEnabled: { type: Boolean, default: false },
+  },
+  { _id: false }
+)
+
 const corpusSchema = new Schema(
   {
     name: {
@@ -42,6 +86,24 @@ const corpusSchema = new Schema(
       type: Schema.Types.Mixed,
       default: {},
       get: (metadata) => metadata ?? {},
+    },
+    /**
+     * Editorial board for the issue. Local-only — not pushed back to OJS.
+     */
+    editors: {
+      type: [CorpusEditorSchema],
+      default: [],
+    },
+    /**
+     * Locale-keyed cover image credit line.
+     */
+    imageCredit: {
+      type: Schema.Types.Mixed,
+      default: () => ({}),
+    },
+    pipelineSettings: {
+      type: PipelineSettingsSchema,
+      default: () => ({}),
     },
     workspace: {
       type: Schema.Types.ObjectId,

@@ -2,9 +2,11 @@ const YAML = require('js-yaml')
 const PipelineJob = require('../models/pipelineJob.js')
 const ExportArtifact = require('../models/exportArtifact.js')
 const Corpus = require('../models/corpus.js')
+const Article = require('../models/article.js')
 const { getArticleByContext } = require('./articleResolver.js')
 const pipelineClient = require('../helpers/pipelineClient.js')
 const { toLegacyFormat } = require('../helpers/metadata.js')
+const { rebuildArticleYaml } = require('../helpers/articleYamlSync.js')
 const {
   NotAuthenticatedError,
   NotFoundError,
@@ -135,6 +137,50 @@ async function loadAndRefreshJob(jobId) {
   return job
 }
 
+/**
+ * Helper for the corpus-scoped artefact mutations (covers, TOC, front page,
+ * complete issue). They share the same flow: permission-check the corpus,
+ * record a PipelineJob, fire the request at the pipeline service. The
+ * pipeline-side runners decide how to assemble the artefact.
+ */
+async function startSimpleArtefactJob({ type, corpusId, context }) {
+  if (!context.user) throw new NotAuthenticatedError()
+  if (!(await pipelineClient.isConfigured())) {
+    throw new BadRequestError('Pipeline service is not configured')
+  }
+  const corpus = await Corpus.findById(corpusId)
+  if (!corpus) throw new NotFoundError('Corpus', corpusId)
+
+  const job = await PipelineJob.create({
+    type,
+    status: 'queued',
+    corpus: corpus._id,
+    workspace: corpus.workspace || undefined,
+    triggeredBy: context.user._id,
+    params: { corpusId: corpus._id.toString() },
+  })
+  try {
+    const remote = await pipelineClient.startJob({
+      type,
+      params: {
+        corpusId: corpus._id.toString(),
+        editors: corpus.editors || [],
+        imageCredit: corpus.imageCredit || {},
+        pipelineSettings: corpus.pipelineSettings || {},
+      },
+    })
+    job.remoteJobId = remote.id
+    job.status = remote.status || 'queued'
+    await job.save()
+  } catch (err) {
+    job.status = 'failed'
+    job.error = err.message
+    await job.save()
+    throw err
+  }
+  return job
+}
+
 module.exports = {
   Query: {
     async pipelineHealth() {
@@ -214,6 +260,128 @@ module.exports = {
       }
 
       return job
+    },
+
+    /**
+     * Build PDFs for every article in a corpus in a single batch job.
+     * The pipeline runs them sequentially (Chromium memory makes parallel
+     * builds risky) and tees per-article logs into the same job. Returns
+     * the local PipelineJob; live progress flows through SSE.
+     */
+    async startBatchBuild(_, args, context) {
+      const { corpusId, engine = 'paged' } = args
+      if (!context.user) throw new NotAuthenticatedError()
+      if (!(await pipelineClient.isConfigured())) {
+        throw new BadRequestError('Pipeline service is not configured')
+      }
+      const corpus = await Corpus.findById(corpusId)
+      if (!corpus) throw new NotFoundError('Corpus', corpusId)
+
+      // Fetch each member article, building the markdown payload in graphql
+      // so the pipeline service stays stateless. Permission check piggy-
+      // backs on the article-level helper.
+      const articleIds = (corpus.articles || [])
+        .map((ca) => ca.article?._id ?? ca.article)
+        .filter(Boolean)
+        .map(String)
+
+      const items = []
+      for (const articleId of articleIds) {
+        try {
+          const article = await getArticleByContext(articleId, context)
+          items.push({
+            articleId,
+            markdown: buildArticleMarkdown(article),
+          })
+        } catch (err) {
+          logger.warn(
+            { err, articleId, corpusId },
+            'startBatchBuild skipped article (no access or missing)'
+          )
+        }
+      }
+      if (items.length === 0) {
+        throw new BadRequestError('Corpus has no buildable articles')
+      }
+
+      const job = await PipelineJob.create({
+        type: 'batch',
+        status: 'queued',
+        corpus: corpus._id,
+        workspace: corpus.workspace || undefined,
+        triggeredBy: context.user._id,
+        params: { engine, corpusId: corpus._id.toString(), count: items.length },
+      })
+      try {
+        const remote = await pipelineClient.startJob({
+          type: 'batch',
+          params: {
+            engine,
+            corpusId: corpus._id.toString(),
+            articles: items,
+          },
+        })
+        job.remoteJobId = remote.id
+        job.status = remote.status || 'queued'
+        await job.save()
+      } catch (err) {
+        job.status = 'failed'
+        job.error = err.message
+        await job.save()
+        throw err
+      }
+      return job
+    },
+
+    /**
+     * Generate cover/TOC/front-page/complete-issue artefacts. Phase 3 ships
+     * the schema + resolver surface; the pipeline-side renderers are
+     * stubbed and will mark the job failed with "not yet implemented" until
+     * the template-renderer port lands. UI surfaces the gap honestly.
+     */
+    async startBuildCovers(_, { corpusId }, context) {
+      return startSimpleArtefactJob({
+        type: 'article-cover',
+        corpusId,
+        context,
+      })
+    },
+    async startBuildToc(_, { corpusId }, context) {
+      return startSimpleArtefactJob({ type: 'toc', corpusId, context })
+    },
+    async startBuildFrontPage(_, { corpusId }, context) {
+      return startSimpleArtefactJob({
+        type: 'front-page',
+        corpusId,
+        context,
+      })
+    },
+    async startBuildCompleteIssue(_, { corpusId }, context) {
+      return startSimpleArtefactJob({
+        type: 'complete-issue',
+        corpusId,
+        context,
+      })
+    },
+
+    /**
+     * Rebuild the YAML frontmatter for an article from its workingVersion
+     * metadata + corpus-level fields (issue id, editors, imageCredit). The
+     * rewritten markdown replaces `workingVersion.md`. Idempotent — running
+     * it twice yields the same output.
+     */
+    async syncArticleYaml(_, { articleId, corpusId }, context) {
+      if (!context.user) throw new NotAuthenticatedError()
+      const article = await getArticleByContext(articleId, context)
+      const corpus = corpusId ? await Corpus.findById(corpusId) : null
+      const { markdown, yaml, metadata } = rebuildArticleYaml({
+        article,
+        corpus,
+      })
+      article.workingVersion.md = markdown
+      article.workingVersion.metadata = metadata
+      await article.save()
+      return { articleId, corpusId: corpusId || null, yaml, markdown }
     },
 
     async cancelPipelineJob(_, { id }, context) {

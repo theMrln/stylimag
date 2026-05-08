@@ -2,7 +2,11 @@ const express = require('express')
 const { logger } = require('./lib/logger')
 const jobs = require('./lib/jobs')
 const preflight = require('./lib/preflight')
-const { runArticlePdfJob } = require('./lib/build-article')
+const {
+  runArticlePdfJob,
+  runBatchBuildJob,
+  makeNotImplementedRunner,
+} = require('./lib/build-article')
 
 const PORT = parseInt(process.env.PORT || '3070', 10)
 const AUTH_TOKEN = process.env.PIPELINE_AUTH_TOKEN || ''
@@ -32,6 +36,11 @@ app.get('/health', async (_req, res) => {
 
 const JOB_RUNNERS = {
   'article-pdf': runArticlePdfJob,
+  batch: runBatchBuildJob,
+  'article-cover': makeNotImplementedRunner('article-cover'),
+  toc: makeNotImplementedRunner('toc'),
+  'front-page': makeNotImplementedRunner('front-page'),
+  'complete-issue': makeNotImplementedRunner('complete-issue'),
 }
 
 app.post('/jobs', requireToken, async (req, res) => {
@@ -43,6 +52,24 @@ app.post('/jobs', requireToken, async (req, res) => {
     const errors = preflight.validateArticleJobParams(params)
     if (errors.length) {
       return res.status(400).json({ error: 'preflight failed', details: errors })
+    }
+  }
+  if (type === 'batch') {
+    if (!Array.isArray(params?.articles) || params.articles.length === 0) {
+      return res
+        .status(400)
+        .json({ error: 'preflight failed', details: ['articles[] required'] })
+    }
+    for (const item of params.articles) {
+      const errs = preflight.validateArticleJobParams({
+        ...item,
+        corpusId: params.corpusId,
+      })
+      if (errs.length) {
+        return res
+          .status(400)
+          .json({ error: 'preflight failed', details: errs, item })
+      }
     }
   }
   const job = jobs.createJob({ type, params })

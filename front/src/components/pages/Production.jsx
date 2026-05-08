@@ -1,7 +1,10 @@
+import { useState } from 'react'
 import { Helmet } from 'react-helmet-async'
 import { useTranslation } from 'react-i18next'
 import { Link, useParams } from 'react-router'
 
+import BuildPanel from '../organisms/production/BuildPanel.jsx'
+import IssueMetadataPanel from '../organisms/production/IssueMetadataPanel.jsx'
 import JobDashboard from '../organisms/production/JobDashboard.jsx'
 import PipelineHealthBadge from '../organisms/production/PipelineHealthBadge.jsx'
 import { PageTitle } from '../atoms/index.js'
@@ -11,6 +14,11 @@ import styles from './Production.module.scss'
 export default function Production() {
   const { t } = useTranslation('production', { useSuspense: false })
   const { corpusId } = useParams()
+  const [dashboardKey, setDashboardKey] = useState(0)
+
+  // Bump the dashboard key whenever a new job is started so the list
+  // refreshes with the freshly-created PipelineJob row at the top.
+  const handleJobStarted = () => setDashboardKey((k) => k + 1)
 
   return (
     <section className={styles.section}>
@@ -36,7 +44,9 @@ export default function Production() {
         <span>{corpusId}</span>
       </nav>
 
-      <JobDashboard corpusId={corpusId} />
+      <BuildPanel corpusId={corpusId} onJobStarted={handleJobStarted} />
+      <IssueMetadataPanel corpusId={corpusId} />
+      <JobDashboard key={dashboardKey} corpusId={corpusId} />
     </section>
   )
 }

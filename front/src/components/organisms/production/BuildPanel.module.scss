@@ -1,0 +1,66 @@
+.panel {
+  border: 1px solid #e1e1e1;
+  border-radius: 0.25rem;
+  padding: 1rem 1.25rem;
+  background: #fff;
+}
+
+.title {
+  margin: 0 0 0.75rem;
+  font-size: 1.05rem;
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 0.6rem 0;
+  border-top: 1px solid #f0f0f0;
+
+  &:first-child {
+    border-top: none;
+  }
+}
+
+.rowLabel {
+  display: block;
+  font-size: 0.95rem;
+}
+
+.rowDescription {
+  margin: 0.15rem 0 0;
+  color: #6b7280;
+  font-size: 0.85rem;
+  max-width: 32rem;
+}
+
+.rowActions {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  white-space: nowrap;
+}
+
+.rowStatus {
+  font-size: 0.85rem;
+  color: #1c5f8e;
+  min-width: 6rem;
+}
+
+.rowError {
+  font-size: 0.85rem;
+  color: #b3261e;
+  max-width: 18rem;
+  white-space: normal;
+}
